@@ -3,10 +3,10 @@
 Platform-specific functionality for DaVinci Resolve MCP Server
 """
 
-import os
-import sys
-import platform
 import logging
+import os
+import platform
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +52,7 @@ def get_resolve_paths():
             "Developer",
             "Scripting",
         )
-        lib_path = os.path.join(
-            program_files_64, "Blackmagic Design", "DaVinci Resolve", "fusionscript.dll"
-        )
+        lib_path = os.path.join(program_files_64, "Blackmagic Design", "DaVinci Resolve", "fusionscript.dll")
         modules_path = os.path.join(api_path, "Modules")
 
     elif platform_name == "linux":  # Linux (not fully implemented)

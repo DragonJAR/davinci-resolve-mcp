@@ -479,7 +479,7 @@ def install_dependencies(venv_path, project_dir):
     pip = get_venv_pip(venv_path)
     req_file = project_dir / "requirements.txt"
 
-    print(f"  Installing dependencies...")
+    print("  Installing dependencies...")
 
     # Install MCP SDK
     subprocess.run([str(pip), "install", "-q", "mcp[cli]"], check=True, capture_output=True)
@@ -573,7 +573,7 @@ def prompt_yes_no(question, default=True):
 
 def prompt_clients():
     """Interactive client selection menu."""
-    print(f"\n  Which MCP client(s) do you want to configure?\n")
+    print("\n  Which MCP client(s) do you want to configure?\n")
 
     for i, client in enumerate(MCP_CLIENTS, 1):
         path = client["get_path"]()
@@ -595,7 +595,7 @@ def prompt_clients():
 
     print()
     try:
-        choice = input(f"  Select (comma-separated, e.g. 1,3,5): ").strip()
+        choice = input("  Select (comma-separated, e.g. 1,3,5): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
         return []
@@ -713,7 +713,7 @@ def main():
 
     if not api_path:
         print(f"\n  {yellow('Warning:')} Could not auto-detect DaVinci Resolve installation.")
-        print(f"  The installer will continue, but you may need to set RESOLVE_SCRIPT_API manually.")
+        print("  The installer will continue, but you may need to set RESOLVE_SCRIPT_API manually.")
         if interactive and not prompt_yes_no("Continue anyway?"):
             print(f"\n  {dim('Aborted.')}")
             sys.exit(1)
@@ -730,7 +730,7 @@ def main():
         print_step(2, total_steps, "Python Environment")
 
     if skip_venv:
-        print(f"  Skipping venv (--no-venv)")
+        print("  Skipping venv (--no-venv)")
         python_path = Path(args.python) if args.python else Path(sys.executable)
         print(f"  Using:     {python_path}")
     elif venv_path.exists() and venv_python.exists():
@@ -874,7 +874,7 @@ def main():
         for line in zed_fmt.split("\n"):
             print(f"    {line}")
         print(f"\n  {cyan('JetBrains IDEs')} (IntelliJ, WebStorm, PyCharm, etc.):")
-        print(f"    Settings → Tools → AI Assistant → Model Context Protocol (MCP)")
+        print("    Settings → Tools → AI Assistant → Model Context Protocol (MCP)")
         print(f"    Add server with command: {python_path} {server_path}")
         if api_path:
             print(f"    Set env: RESOLVE_SCRIPT_API={api_path}")
@@ -916,12 +916,12 @@ def main():
         print()
         print(f"  {bold('Next steps:')}")
         if not resolve_running:
-            print(f"    1. Start DaVinci Resolve")
-            print(f"    2. Open your MCP client")
-            print(f"    3. Start using natural language to control Resolve!")
+            print("    1. Start DaVinci Resolve")
+            print("    2. Open your MCP client")
+            print("    3. Start using natural language to control Resolve!")
         else:
-            print(f"    1. Open your MCP client")
-            print(f"    2. Start using natural language to control Resolve!")
+            print("    1. Open your MCP client")
+            print("    2. Start using natural language to control Resolve!")
         print()
         print(f"  {dim(f'Server: {server_path}')}")
         print(f"  {dim(f'Python: {python_path}')}")

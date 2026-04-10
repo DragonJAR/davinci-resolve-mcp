@@ -2,11 +2,11 @@
 """Granular DaVinci Resolve MCP Server — modular package."""
 
 import logging
-from typing import Dict, Any
 
 # ── Create MCP server (MUST be defined before modules import it) ────
 from mcp.server.fastmcp import FastMCP
-mcp = FastMCP('davinci-resolve-granular')
+
+mcp = FastMCP("davinci-resolve-granular")
 
 # ── Import all tool modules (they use the mcp instance above) ───────
 from granular.folder import *

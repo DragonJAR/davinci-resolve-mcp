@@ -2,7 +2,54 @@
 """Granular server — project tools."""
 
 # ── Shared mcp server (defined in granular/__init__.py) ───────────
+# ── Imports ──────────────────────────────────────────────────────
+import logging
+import os
+import platform
+import subprocess
+import tempfile
+import time
+from typing import Any, Dict, List, Optional
+
 from granular import mcp
+from src.utils.app_control import (
+    dvr_script,
+    get_app_state,
+)
+from src.utils.cloud_operations import (
+    add_user_to_cloud_project,
+    create_cloud_project,
+    export_project_to_cloud,
+    get_cloud_project_list,
+    import_cloud_project,
+    remove_user_from_cloud_project,
+    restore_cloud_project,
+)
+from src.utils.layout_presets import (
+    list_layout_presets,
+)
+
+# ── Utility imports (extracted from monolithic server) ───────────
+from src.utils.object_inspection import (
+    inspect_object,
+)
+from src.utils.project_properties import (
+    get_all_project_properties,
+    get_color_settings,
+    get_project_info,
+    get_project_metadata,
+    get_project_property,
+    get_superscale_settings,
+    get_timeline_format_settings,
+    set_color_science_mode,
+    set_project_property,
+    set_superscale_settings,
+)
+
+# ── Shared mcp server (defined in granular/__init__.py) ───────────
+# ── Logger ──────────────────────────────────────────────────────
+logger = logging.getLogger(__name__)
+
 
 # ── Helpers ──────────────────────────────────────────────────────
 def _find_clip_by_id(folder, target_id):
@@ -14,6 +61,8 @@ def _find_clip_by_id(folder, target_id):
         if found:
             return found
     return None
+
+
 def _find_clips_by_ids(folder, ids_set):
     found = []
     for clip in folder.GetClipList() or []:
@@ -22,6 +71,8 @@ def _find_clips_by_ids(folder, ids_set):
     for sub in folder.GetSubFolderList() or []:
         found.extend(_find_clips_by_ids(sub, ids_set))
     return found
+
+
 def _get_mp():
     resolve = get_resolve()
     if resolve is None:
@@ -33,6 +84,8 @@ def _get_mp():
     if not mp:
         return project, None, {"error": "Failed to get MediaPool"}
     return project, mp, None
+
+
 def _get_timeline():
     resolve = get_resolve()
     if resolve is None:
@@ -44,16 +97,18 @@ def _get_timeline():
     if not tl:
         return project, None, {"error": "No current timeline"}
     return project, tl, None
+
+
 def _get_timeline_item(track_type="video", track_index=1, item_index=0):
     _, tl, err = _get_timeline()
     if err:
         return None, err
     items = tl.GetItemListInTrack(track_type, track_index)
     if not items or item_index >= len(items):
-        return None, {
-            "error": f"No item at index {item_index} on {track_type} track {track_index}"
-        }
+        return None, {"error": f"No item at index {item_index} on {track_type} track {track_index}"}
     return items[item_index], None
+
+
 def _launch_resolve():
     """Launch DaVinci Resolve and wait for it to become available."""
     sys_name = platform.system().lower()
@@ -82,6 +137,8 @@ def _launch_resolve():
             return True
     logger.warning("Resolve did not respond within 60s after launch")
     return False
+
+
 def _navigate_to_folder(mp, folder_path):
     root = mp.GetRootFolder()
     if not folder_path or folder_path in ("Master", "/", ""):
@@ -100,6 +157,8 @@ def _navigate_to_folder(mp, folder_path):
         if not found:
             return None
     return current
+
+
 def _resolve_safe_dir(path):
     """Redirect sandbox/temp paths that Resolve can't access to ~/Desktop/resolve-stills.
 
@@ -114,14 +173,14 @@ def _resolve_safe_dir(path):
         _is_sandbox = path.startswith("/tmp") or path.startswith("/var/tmp")
     elif platform.system() == "Windows":
         try:
-            _is_sandbox = os.path.commonpath(
-                [os.path.abspath(path), os.path.abspath(system_temp)]
-            ) == os.path.abspath(system_temp)
+            _is_sandbox = os.path.commonpath([os.path.abspath(path), os.path.abspath(system_temp)]) == os.path.abspath(system_temp)
         except ValueError:
             _is_sandbox = False
     if _is_sandbox:
         return os.path.join(os.path.expanduser("~"), "Documents", "resolve-stills")
     return path
+
+
 def _serialize_value(value):
     """Helper to serialize Resolve API objects to JSON-safe values."""
     if value is None:
@@ -134,25 +193,29 @@ def _serialize_value(value):
         return [_serialize_value(v) for v in value]
     # Resolve API object — return string representation
     return str(value)
+
+
 def _try_connect():
     """Attempt to connect to Resolve once. Returns resolve object or None."""
     global resolve
     try:
         resolve = dvr_script.scriptapp("Resolve")
         if resolve:
-            logger.info(
-                f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}"
-            )
+            logger.info(f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}")
         return resolve
     except Exception as e:
         logger.error(f"Connection error: {e}")
         resolve = None
         return None
+
+
 def _validate_path(user_path: str) -> str:
     """Validate that user_path doesn't contain path traversal."""
     if ".." in user_path:
         raise ValueError(f"Path traversal detected in: {user_path}")
     return os.path.realpath(user_path)
+
+
 def find_clip_by_id(folder, target_id):
     for clip in folder.GetClipList() or []:
         if clip.GetUniqueId() == target_id:
@@ -162,6 +225,8 @@ def find_clip_by_id(folder, target_id):
         if found:
             return found
     return None
+
+
 def get_all_media_pool_clips(media_pool):
     """Get all clips from media pool recursively including subfolders."""
     clips = []
@@ -178,6 +243,8 @@ def get_all_media_pool_clips(media_pool):
 
     process_folder(root_folder)
     return clips
+
+
 def get_all_media_pool_folders(media_pool):
     """Get all folders from media pool recursively."""
     folders = []
@@ -192,6 +259,8 @@ def get_all_media_pool_folders(media_pool):
 
     process_folder(root_folder)
     return folders
+
+
 def get_app_state_endpoint() -> Dict[str, Any]:
     """Get DaVinci Resolve application state information."""
     resolve = get_resolve()
@@ -199,6 +268,8 @@ def get_app_state_endpoint() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve", "connected": False}
 
     return get_app_state(resolve)
+
+
 def get_cache_settings() -> Dict[str, Any]:
     """Get current cache settings from the project."""
     pm, current_project = get_current_project()
@@ -226,6 +297,8 @@ def get_cache_settings() -> Dict[str, Any]:
         return settings
     except Exception as e:
         return {"error": f"Failed to get cache settings: {str(e)}"}
+
+
 def get_cloud_projects() -> Dict[str, Any]:
     """Get list of available cloud projects."""
     resolve = get_resolve()
@@ -233,6 +306,8 @@ def get_cloud_projects() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve", "success": False}
 
     return get_cloud_project_list(resolve)
+
+
 def get_color_presets() -> List[Dict[str, Any]]:
     """Get all available color presets in the current project."""
     pm, current_project = get_current_project()
@@ -284,6 +359,8 @@ def get_color_presets() -> List[Dict[str, Any]]:
         if current_page != "color":
             resolve.OpenPage(current_page)
         return [{"error": f"Error retrieving color presets: {str(e)}"}]
+
+
 def get_color_settings_endpoint() -> Dict[str, Any]:
     """Get color science and color space settings for the current project."""
     pm, current_project = get_current_project()
@@ -291,6 +368,8 @@ def get_color_settings_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_color_settings(current_project)
+
+
 def get_color_wheel_params(node_index: int = None) -> Dict[str, Any]:
     """Get color wheel parameters for a specific node.
 
@@ -298,15 +377,21 @@ def get_color_wheel_params(node_index: int = None) -> Dict[str, Any]:
         node_index: Index of the node to get color wheels from (uses current node if None)
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_current_color_node() -> Dict[str, Any]:
     """Get information about the current node in the color page."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_current_page() -> str:
     """Get the current page open in DaVinci Resolve (Edit, Color, Fusion, etc.)."""
     resolve = get_resolve()
     if resolve is None:
         return "Error: Not connected to DaVinci Resolve"
     return resolve.GetCurrentPage()
+
+
 def get_current_project():
     """Get current project with lazy connection and null guards."""
     pm = get_project_manager()
@@ -314,6 +399,8 @@ def get_current_project():
         return None, None
     proj = pm.GetCurrentProject()
     return pm, proj
+
+
 def get_current_project_name() -> str:
     """Get the name of the currently open project."""
     pm, current_project = get_current_project()
@@ -321,6 +408,8 @@ def get_current_project_name() -> str:
         return "No project currently open"
 
     return current_project.GetName()
+
+
 def get_current_timeline() -> Dict[str, Any]:
     """Get information about the current timeline."""
     pm, current_project = get_current_project()
@@ -339,12 +428,12 @@ def get_current_timeline() -> Dict[str, Any]:
             "width": current_timeline.GetSetting("timelineResolutionWidth"),
             "height": current_timeline.GetSetting("timelineResolutionHeight"),
         },
-        "duration": current_timeline.GetEndFrame()
-        - current_timeline.GetStartFrame()
-        + 1,
+        "duration": current_timeline.GetEndFrame() - current_timeline.GetStartFrame() + 1,
     }
 
     return result
+
+
 def get_layout_presets() -> List[Dict[str, Any]]:
     """Get all available layout presets for DaVinci Resolve."""
     resolve = get_resolve()
@@ -352,6 +441,8 @@ def get_layout_presets() -> List[Dict[str, Any]]:
         return {"error": "Not connected to DaVinci Resolve"}
 
     return list_layout_presets(layout_type="ui")
+
+
 def get_lut_formats() -> Dict[str, Any]:
     """Get available LUT export formats and sizes."""
     formats = {
@@ -393,6 +484,8 @@ def get_lut_formats() -> Dict[str, Any]:
         ],
     }
     return formats
+
+
 def get_media_pool_bin_contents(bin_name: str) -> List[Dict[str, Any]]:
     """Get contents of a specific bin/folder in the media pool.
 
@@ -400,6 +493,8 @@ def get_media_pool_bin_contents(bin_name: str) -> List[Dict[str, Any]]:
         bin_name: The name of the bin to get contents from. Use 'Master' for the root folder.
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_project_info_endpoint() -> Dict[str, Any]:
     """Get comprehensive information about the current project."""
     pm, current_project = get_current_project()
@@ -407,6 +502,8 @@ def get_project_info_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_project_info(current_project)
+
+
 def get_project_manager():
     """Get ProjectManager with lazy connection and null guard."""
     r = get_resolve()
@@ -414,6 +511,8 @@ def get_project_manager():
         return None
     pm = r.GetProjectManager()
     return pm
+
+
 def get_project_metadata_endpoint() -> Dict[str, Any]:
     """Get metadata for the current project."""
     pm, current_project = get_current_project()
@@ -421,6 +520,8 @@ def get_project_metadata_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_project_metadata(current_project)
+
+
 def get_project_properties_endpoint() -> Dict[str, Any]:
     """Get all project properties for the current project."""
     pm, current_project = get_current_project()
@@ -428,6 +529,8 @@ def get_project_properties_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_all_project_properties(current_project)
+
+
 def get_project_property_endpoint(property_name: str) -> Dict[str, Any]:
     """Get a specific project property value.
 
@@ -440,6 +543,8 @@ def get_project_property_endpoint(property_name: str) -> Dict[str, Any]:
 
     value = get_project_property(current_project, property_name)
     return {property_name: value}
+
+
 def get_project_setting(setting_name: str) -> Dict[str, Any]:
     """Get a specific project setting by name.
 
@@ -456,6 +561,8 @@ def get_project_setting(setting_name: str) -> Dict[str, Any]:
         return {setting_name: value}
     except Exception as e:
         return {"error": f"Failed to get project setting '{setting_name}': {str(e)}"}
+
+
 def get_project_settings() -> Dict[str, Any]:
     """Get all project settings from the current project."""
     pm, current_project = get_current_project()
@@ -467,12 +574,18 @@ def get_project_settings() -> Dict[str, Any]:
         return current_project.GetSetting("")
     except Exception as e:
         return {"error": f"Failed to get project settings: {str(e)}"}
+
+
 def get_render_presets() -> List[Dict[str, Any]]:
     """Get all available render presets in the current project."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_render_queue_status() -> Dict[str, Any]:
     """Get the status of jobs in the render queue."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_resolve():
     """Lazy connection to Resolve — connects on first tool call, auto-launches if needed."""
     global resolve
@@ -483,12 +596,16 @@ def get_resolve():
     logger.info("Resolve not running, attempting to launch automatically...")
     _launch_resolve()
     return resolve
+
+
 def get_resolve_version() -> str:
     """Get DaVinci Resolve version information."""
     resolve = get_resolve()
     if resolve is None:
         return "Error: Not connected to DaVinci Resolve"
     return f"{resolve.GetProductName()} {resolve.GetVersionString()}"
+
+
 def get_superscale_settings_endpoint() -> Dict[str, Any]:
     """Get SuperScale settings for the current project."""
     pm, current_project = get_current_project()
@@ -496,6 +613,8 @@ def get_superscale_settings_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_superscale_settings(current_project)
+
+
 def get_timeline_format() -> Dict[str, Any]:
     """Get timeline format settings for the current project."""
     pm, current_project = get_current_project()
@@ -503,9 +622,9 @@ def get_timeline_format() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_timeline_format_settings(current_project)
-def get_timeline_item_keyframes(
-    timeline_item_id: str, property_name: str
-) -> Dict[str, Any]:
+
+
+def get_timeline_item_keyframes(timeline_item_id: str, property_name: str) -> Dict[str, Any]:
     """Get keyframes for a specific timeline item by ID.
 
     Args:
@@ -597,10 +716,7 @@ def get_timeline_item_keyframes(
                         keyframes[prop].append({"frame": frame_pos, "value": value})
 
         # Check if it has audio properties (could be video with audio or audio-only)
-        if (
-            timeline_item.GetType() == "Audio"
-            or timeline_item.GetMediaType() == "Audio"
-        ):
+        if timeline_item.GetType() == "Audio" or timeline_item.GetMediaType() == "Audio":
             # Check each audio property for keyframes
             for prop in audio_properties:
                 if (timeline_item.GetKeyframeCount(prop) or 0) > 0:
@@ -644,6 +760,8 @@ def get_timeline_item_keyframes(
 
     except Exception as e:
         return {"error": f"Error getting timeline item keyframes: {str(e)}"}
+
+
 def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
     """Get properties of a specific timeline item by ID.
 
@@ -710,9 +828,7 @@ def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
                     "x": timeline_item.GetProperty("Pan"),
                     "y": timeline_item.GetProperty("Tilt"),
                 },
-                "zoom": timeline_item.GetProperty(
-                    "ZoomX"
-                ),  # ZoomX/ZoomY can be different for non-uniform scaling
+                "zoom": timeline_item.GetProperty("ZoomX"),  # ZoomX/ZoomY can be different for non-uniform scaling
                 "zoom_x": timeline_item.GetProperty("ZoomX"),
                 "zoom_y": timeline_item.GetProperty("ZoomY"),
                 "rotation": timeline_item.GetProperty("Rotation"),
@@ -758,10 +874,7 @@ def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
             }
 
         # Audio-specific properties
-        if (
-            timeline_item.GetType() == "Audio"
-            or timeline_item.GetMediaType() == "Audio"
-        ):
+        if timeline_item.GetType() == "Audio" or timeline_item.GetMediaType() == "Audio":
             properties["audio"] = {
                 "volume": timeline_item.GetProperty("Volume"),
                 "pan": timeline_item.GetProperty("Pan"),
@@ -774,6 +887,8 @@ def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
 
     except Exception as e:
         return {"error": f"Error getting timeline item properties: {str(e)}"}
+
+
 def get_timeline_items() -> List[Dict[str, Any]]:
     """Get all items in the current timeline with their IDs and basic properties."""
     pm, current_project = get_current_project()
@@ -831,6 +946,8 @@ def get_timeline_items() -> List[Dict[str, Any]]:
         return items
     except Exception as e:
         return [{"error": f"Error listing timeline items: {str(e)}"}]
+
+
 def get_timeline_tracks(timeline_name: str = None) -> Dict[str, Any]:
     """Get the track structure of a timeline.
 
@@ -838,6 +955,8 @@ def get_timeline_tracks(timeline_name: str = None) -> Dict[str, Any]:
         timeline_name: Optional name of the timeline to get tracks from. Uses current timeline if None.
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def inspect_current_project_object() -> Dict[str, Any]:
     """Inspect the current project object and return its methods and properties."""
     pm, current_project = get_current_project()
@@ -845,6 +964,8 @@ def inspect_current_project_object() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return inspect_object(current_project)
+
+
 def inspect_current_timeline_object() -> Dict[str, Any]:
     """Inspect the current timeline object and return its methods and properties."""
     pm, current_project = get_current_project()
@@ -856,6 +977,8 @@ def inspect_current_timeline_object() -> Dict[str, Any]:
         return {"error": "No timeline currently active"}
 
     return inspect_object(current_timeline)
+
+
 def inspect_media_pool_object() -> Dict[str, Any]:
     """Inspect the media pool object and return its methods and properties."""
     pm, current_project = get_current_project()
@@ -867,6 +990,8 @@ def inspect_media_pool_object() -> Dict[str, Any]:
         return {"error": "Failed to get Media Pool"}
 
     return inspect_object(media_pool)
+
+
 def inspect_project_manager_object() -> Dict[str, Any]:
     """Inspect the project manager object and return its methods and properties."""
     project_manager = get_project_manager()
@@ -874,6 +999,8 @@ def inspect_project_manager_object() -> Dict[str, Any]:
         return {"error": "Failed to get Project Manager"}
 
     return inspect_object(project_manager)
+
+
 def inspect_resolve_object() -> Dict[str, Any]:
     """Inspect the main resolve object and return its methods and properties."""
     resolve = get_resolve()
@@ -881,9 +1008,13 @@ def inspect_resolve_object() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve"}
 
     return inspect_object(resolve)
+
+
 def list_media_pool_bins() -> List[Dict[str, Any]]:
     """List all bins/folders in the media pool."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def list_media_pool_clips() -> List[Dict[str, Any]]:
     """List all clips in the root folder of the media pool."""
     pm, current_project = get_current_project()
@@ -914,6 +1045,8 @@ def list_media_pool_clips() -> List[Dict[str, Any]]:
         )
 
     return result
+
+
 def list_projects() -> List[str]:
     """List all available projects in the current database."""
     project_manager = get_project_manager()
@@ -924,6 +1057,8 @@ def list_projects() -> List[str]:
 
     # Filter out any empty strings that might be in the list
     return [p for p in projects if p]
+
+
 def list_timeline_clips() -> List[Dict[str, Any]]:
     """List all clips in the current timeline."""
     pm, current_project = get_current_project()
@@ -980,6 +1115,8 @@ def list_timeline_clips() -> List[Dict[str, Any]]:
         return clips
     except Exception as e:
         return [{"error": f"Error listing timeline clips: {str(e)}"}]
+
+
 def list_timelines() -> List[str]:
     """List all timelines in the current project."""
     logger.info("Received request to list timelines")
@@ -1016,29 +1153,15 @@ def list_timelines() -> List[str]:
 
     logger.info(f"Returning {len(timelines)} timelines: {', '.join(timelines)}")
     return timelines
-def process_folder(folder):
-    folders.append(folder)
 
-    sub_folders = folder.GetSubFolderList()
-    for sub_folder in sub_folders:
-        process_folder(sub_folder)
-def search(folder):
-    for clip in folder.GetClipList() or []:
-        if clip.GetName() == clip_name:
-            return clip
-    for sub in folder.GetSubFolderList() or []:
-        found = search(sub)
-        if found:
-            return found
-    return None
 
 # ── Tools ────────────────────────────────────────────────────────
 @mcp.tool()
 def add_color_group(group_name: str) -> Dict[str, Any]:
     """Create a new color group in the current project.
 
-        Args:
-        group_name: Name for the new color group.
+    Args:
+    group_name: Name for the new color group.
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1049,22 +1172,22 @@ def add_color_group(group_name: str) -> Dict[str, Any]:
     result = project.AddColorGroup(group_name)
     return {"success": bool(result), "group_name": group_name}
 
+
 @mcp.tool()
-def add_user_to_cloud_project_tool(
-    cloud_id: str, user_email: str, permissions: str = "viewer"
-) -> Dict[str, Any]:
+def add_user_to_cloud_project_tool(cloud_id: str, user_email: str, permissions: str = "viewer") -> Dict[str, Any]:
     """Add a user to a cloud project with specified permissions.
 
-        Args:
-        cloud_id: Cloud ID of the project
-        user_email: Email of the user to add
-        permissions: Permission level (viewer, editor, admin)
+    Args:
+    cloud_id: Cloud ID of the project
+    user_email: Email of the user to add
+    permissions: Permission level (viewer, editor, admin)
     """
     resolve = get_resolve()
     if resolve is None:
         return {"error": "Not connected to DaVinci Resolve", "success": False}
 
     return add_user_to_cloud_project(resolve, cloud_id, user_email, permissions)
+
 
 @mcp.tool()
 def close_project() -> str:
@@ -1080,7 +1203,7 @@ def close_project() -> str:
 
     # Close the project
     try:
-        result = project_manager.CloseProject(current_project)
+        result = pm.CloseProject(current_project)
         if result:
             logger.info(f"Project '{project_name}' closed successfully")
             return f"Successfully closed project '{project_name}'"
@@ -1091,15 +1214,14 @@ def close_project() -> str:
         logger.error(f"Error closing project: {str(e)}")
         return f"Error closing project: {str(e)}"
 
+
 @mcp.tool()
-def create_cloud_project_tool(
-    project_name: str, folder_path: str = None
-) -> Dict[str, Any]:
+def create_cloud_project_tool(project_name: str, folder_path: str = None) -> Dict[str, Any]:
     """Create a new cloud project.
 
-        Args:
-        project_name: Name for the new cloud project
-        folder_path: Optional path for the cloud project folder
+    Args:
+    project_name: Name for the new cloud project
+    folder_path: Optional path for the cloud project folder
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1107,12 +1229,13 @@ def create_cloud_project_tool(
 
     return create_cloud_project(resolve, project_name, folder_path)
 
+
 @mcp.tool()
 def delete_color_group(group_name: str) -> Dict[str, Any]:
     """Delete a color group from the current project.
 
-        Args:
-        group_name: Name of the color group to delete.
+    Args:
+    group_name: Name of the color group to delete.
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1133,12 +1256,13 @@ def delete_color_group(group_name: str) -> Dict[str, Any]:
     result = project.DeleteColorGroup(target)
     return {"success": bool(result), "group_name": group_name}
 
+
 @mcp.tool()
 def delete_timelines_by_id(timeline_ids: List[str]) -> Dict[str, Any]:
     """Delete timelines by their unique IDs.
 
-        Args:
-        timeline_ids: List of timeline unique IDs to delete.
+    Args:
+    timeline_ids: List of timeline unique IDs to delete.
     """
     project, mp, err = _get_mp()
     if err:
@@ -1153,18 +1277,20 @@ def delete_timelines_by_id(timeline_ids: List[str]) -> Dict[str, Any]:
     result = mp.DeleteTimelines(timelines)
     return {"success": bool(result), "deleted_count": len(timelines)}
 
+
 @mcp.tool()
 def export_project_to_cloud_tool(project_name: str = None) -> Dict[str, Any]:
     """Export current or specified project to DaVinci Resolve cloud.
 
-        Args:
-        project_name: Optional name of project to export (uses current project if None)
+    Args:
+    project_name: Optional name of project to export (uses current project if None)
     """
     resolve = get_resolve()
     if resolve is None:
         return {"error": "Not connected to DaVinci Resolve", "success": False}
 
     return export_project_to_cloud(resolve, project_name)
+
 
 @mcp.tool()
 def get_color_groups_list() -> Dict[str, Any]:
@@ -1180,6 +1306,7 @@ def get_color_groups_list() -> Dict[str, Any]:
         return {"color_groups": [{"name": g.GetName()} for g in groups]}
     return {"color_groups": []}
 
+
 @mcp.tool()
 def get_project_unique_id() -> Dict[str, Any]:
     """Get the unique ID of the current project."""
@@ -1192,12 +1319,13 @@ def get_project_unique_id() -> Dict[str, Any]:
     uid = project.GetUniqueId()
     return {"unique_id": uid}
 
+
 @mcp.tool()
 def get_render_codecs(format_name: str) -> Dict[str, Any]:
     """Get available codecs for a given render format.
 
-        Args:
-        format_name: Render format name (e.g. 'mp4', 'mov', 'avi').
+    Args:
+    format_name: Render format name (e.g. 'mp4', 'mov', 'avi').
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1216,15 +1344,14 @@ def get_render_codecs(format_name: str) -> Dict[str, Any]:
                 break
     return {"codecs": codecs if codecs else {}}
 
+
 @mcp.tool()
-def import_cloud_project_tool(
-    cloud_id: str, project_name: str = None
-) -> Dict[str, Any]:
+def import_cloud_project_tool(cloud_id: str, project_name: str = None) -> Dict[str, Any]:
     """Import a project from DaVinci Resolve cloud.
 
-        Args:
-        cloud_id: Cloud ID or reference of the project to import
-        project_name: Optional custom name for the imported project (uses original name if None)
+    Args:
+    cloud_id: Cloud ID or reference of the project to import
+    project_name: Optional custom name for the imported project (uses original name if None)
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1232,12 +1359,13 @@ def import_cloud_project_tool(
 
     return import_cloud_project(resolve, cloud_id, project_name)
 
+
 @mcp.tool()
 def load_burn_in_preset(preset_name: str) -> Dict[str, Any]:
     """Load a burn-in preset by name for the project.
 
-        Args:
-        preset_name: Name of the burn-in preset to load.
+    Args:
+    preset_name: Name of the burn-in preset to load.
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1247,6 +1375,7 @@ def load_burn_in_preset(preset_name: str) -> Dict[str, Any]:
         return {"error": "No project currently open"}
     result = project.LoadBurnInPreset(preset_name)
     return {"success": bool(result), "preset_name": preset_name}
+
 
 @mcp.tool()
 def refresh_lut_list() -> Dict[str, Any]:
@@ -1260,15 +1389,14 @@ def refresh_lut_list() -> Dict[str, Any]:
     result = project.RefreshLUTList()
     return {"success": bool(result)}
 
+
 @mcp.tool()
-def remove_user_from_cloud_project_tool(
-    cloud_id: str, user_email: str
-) -> Dict[str, Any]:
+def remove_user_from_cloud_project_tool(cloud_id: str, user_email: str) -> Dict[str, Any]:
     """Remove a user from a cloud project.
 
-        Args:
-        cloud_id: Cloud ID of the project
-        user_email: Email of the user to remove
+    Args:
+    cloud_id: Cloud ID of the project
+    user_email: Email of the user to remove
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1276,21 +1404,21 @@ def remove_user_from_cloud_project_tool(
 
     return remove_user_from_cloud_project(resolve, cloud_id, user_email)
 
+
 @mcp.tool()
-def restore_cloud_project_tool(
-    cloud_id: str, project_name: str = None
-) -> Dict[str, Any]:
+def restore_cloud_project_tool(cloud_id: str, project_name: str = None) -> Dict[str, Any]:
     """Restore a project from DaVinci Resolve cloud.
 
-        Args:
-        cloud_id: Cloud ID or reference of the project to restore
-        project_name: Optional custom name for the restored project (uses original name if None)
+    Args:
+    cloud_id: Cloud ID or reference of the project to restore
+    project_name: Optional custom name for the restored project (uses original name if None)
     """
     resolve = get_resolve()
     if resolve is None:
         return {"error": "Not connected to DaVinci Resolve", "success": False}
 
     return restore_cloud_project(resolve, cloud_id, project_name)
+
 
 @mcp.tool()
 def save_project() -> str:
@@ -1313,9 +1441,7 @@ def save_project() -> str:
             if hasattr(current_project, "SaveProject"):
                 result = current_project.SaveProject()
                 if result:
-                    logger.info(
-                        f"Project '{project_name}' saved using SaveProject method"
-                    )
+                    logger.info(f"Project '{project_name}' saved using SaveProject method")
                     success = True
         except Exception as e:
             logger.error(f"Error in SaveProject method: {str(e)}")
@@ -1324,12 +1450,10 @@ def save_project() -> str:
         # Method 2: Try project manager save method
         if not success:
             try:
-                if hasattr(project_manager, "SaveProject"):
-                    result = project_manager.SaveProject()
+                if hasattr(pm, "SaveProject"):
+                    result = pm.SaveProject()
                     if result:
-                        logger.info(
-                            f"Project '{project_name}' saved using ProjectManager.SaveProject method"
-                        )
+                        logger.info(f"Project '{project_name}' saved using ProjectManager.SaveProject method")
                         success = True
             except Exception as e:
                 logger.error(f"Error in ProjectManager.SaveProject method: {str(e)}")
@@ -1345,16 +1469,14 @@ def save_project() -> str:
                 temp_file = os.path.join(temp_dir, f"{project_name}_temp.drp")
 
                 # Try to export the project, which should trigger a save
-                result = project_manager.ExportProject(project_name, temp_file)
+                result = pm.ExportProject(project_name, temp_file)
                 if result:
-                    logger.info(
-                        f"Project '{project_name}' saved via temporary export to {temp_file}"
-                    )
+                    logger.info(f"Project '{project_name}' saved via temporary export to {temp_file}")
                     # Try to clean up temp file
                     try:
                         if os.path.exists(temp_file):
                             os.remove(temp_file)
-                    except:
+                    except Exception:
                         pass
                     success = True
             except Exception as e:
@@ -1372,12 +1494,13 @@ def save_project() -> str:
         logger.error(f"Error saving project: {str(e)}")
         return f"Error saving project: {str(e)}"
 
+
 @mcp.tool()
 def set_cache_mode(mode: str) -> str:
     """Set cache mode for the current project.
 
-        Args:
-        mode: Cache mode to set. Options: 'auto', 'on', 'off'
+    Args:
+    mode: Cache mode to set. Options: 'auto', 'on', 'off'
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1401,12 +1524,13 @@ def set_cache_mode(mode: str) -> str:
     except Exception as e:
         return f"Error setting cache mode: {str(e)}"
 
+
 @mcp.tool()
 def set_color_science_mode_tool(mode: str) -> str:
     """Set color science mode for the current project.
 
-        Args:
-        mode: Color science mode ('YRGB', 'YRGB Color Managed', 'ACEScct', or numeric value)
+    Args:
+    mode: Color science mode ('YRGB', 'YRGB Color Managed', 'ACEScct', or numeric value)
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1419,12 +1543,13 @@ def set_color_science_mode_tool(mode: str) -> str:
     else:
         return f"Failed to set color science mode to '{mode}'"
 
+
 @mcp.tool()
 def set_optimized_media_mode(mode: str) -> str:
     """Set optimized media mode for the current project.
 
-        Args:
-        mode: Optimized media mode to set. Options: 'auto', 'on', 'off'
+    Args:
+    mode: Optimized media mode to set. Options: 'auto', 'on', 'off'
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1448,12 +1573,13 @@ def set_optimized_media_mode(mode: str) -> str:
     except Exception as e:
         return f"Error setting optimized media mode: {str(e)}"
 
+
 @mcp.tool()
 def set_project_name(name: str) -> Dict[str, Any]:
     """Rename the current project.
 
-        Args:
-        name: New name for the project.
+    Args:
+    name: New name for the project.
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1464,12 +1590,13 @@ def set_project_name(name: str) -> Dict[str, Any]:
     result = project.SetName(name)
     return {"success": bool(result), "name": name}
 
+
 @mcp.tool()
 def set_project_preset(preset_name: str) -> Dict[str, Any]:
     """Apply a project preset to the current project.
 
-        Args:
-        preset_name: Name of the preset to apply.
+    Args:
+    preset_name: Name of the preset to apply.
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1480,13 +1607,14 @@ def set_project_preset(preset_name: str) -> Dict[str, Any]:
     result = project.SetPreset(preset_name)
     return {"success": bool(result), "preset_name": preset_name}
 
+
 @mcp.tool()
 def set_project_property_tool(property_name: str, property_value: Any) -> str:
     """Set a project property value.
 
-        Args:
-        property_name: Name of the property to set
-        property_value: Value to set for the property
+    Args:
+    property_name: Name of the property to set
+    property_value: Value to set for the property
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1495,19 +1623,18 @@ def set_project_property_tool(property_name: str, property_value: Any) -> str:
     result = set_project_property(current_project, property_name, property_value)
 
     if result:
-        return (
-            f"Successfully set project property '{property_name}' to '{property_value}'"
-        )
+        return f"Successfully set project property '{property_name}' to '{property_value}'"
     else:
         return f"Failed to set project property '{property_name}'"
+
 
 @mcp.tool()
 def set_project_setting(setting_name: str, setting_value: Any) -> str:
     """Set a project setting to the specified value.
 
-        Args:
-        setting_name: The name of the setting to change
-        setting_value: The new value for the setting (can be string, integer, float, or boolean)
+    Args:
+    setting_name: The name of the setting to change
+    setting_value: The new value for the setting (can be string, integer, float, or boolean)
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1522,18 +1649,13 @@ def set_project_setting(setting_name: str, setting_value: Any) -> str:
         # DaVinci Resolve sometimes expects numeric values for certain settings
         try:
             # Check if it's a number in string form
-            if setting_value.isdigit() or (
-                setting_value.startswith("-") and setting_value[1:].isdigit()
-            ):
+            if setting_value.isdigit() or (setting_value.startswith("-") and setting_value[1:].isdigit()):
                 # It's an integer
                 numeric_value = int(setting_value)
                 # Try with numeric value first
                 if current_project.SetSetting(setting_name, numeric_value):
                     return f"Successfully set project setting '{setting_name}' to numeric value {numeric_value}"
-            elif (
-                "." in setting_value
-                and setting_value.replace(".", "", 1).replace("-", "", 1).isdigit()
-            ):
+            elif "." in setting_value and setting_value.replace(".", "", 1).replace("-", "", 1).isdigit():
                 # It's a float
                 numeric_value = float(setting_value)
                 # Try with float value
@@ -1552,12 +1674,13 @@ def set_project_setting(setting_name: str, setting_value: Any) -> str:
     except Exception as e:
         return f"Error setting project setting: {str(e)}"
 
+
 @mcp.tool()
 def set_proxy_mode(mode: str) -> str:
     """Set proxy media mode for the current project.
 
-        Args:
-        mode: Proxy mode to set. Options: 'auto', 'on', 'off'
+    Args:
+    mode: Proxy mode to set. Options: 'auto', 'on', 'off'
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1581,12 +1704,13 @@ def set_proxy_mode(mode: str) -> str:
     except Exception as e:
         return f"Error setting proxy mode: {str(e)}"
 
+
 @mcp.tool()
 def set_proxy_quality(quality: str) -> str:
     """Set proxy media quality for the current project.
 
-        Args:
-        quality: Proxy quality to set. Options: 'quarter', 'half', 'threeQuarter', 'full'
+    Args:
+    quality: Proxy quality to set. Options: 'quarter', 'half', 'threeQuarter', 'full'
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1609,18 +1733,19 @@ def set_proxy_quality(quality: str) -> str:
     except Exception as e:
         return f"Error setting proxy quality: {str(e)}"
 
+
 @mcp.tool()
 def set_render_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     """Set render settings for the current project.
 
-        Args:
-        settings: Dict of render settings. Supported keys include:
-            SelectAllFrames (bool), MarkIn (int), MarkOut (int),
-            TargetDir (str), CustomName (str), UniqueFilenameStyle (0/1),
-            ExportVideo (bool), ExportAudio (bool), FormatWidth (int),
-            FormatHeight (int), FrameRate (float), VideoQuality (int/str),
-            AudioCodec (str), AudioBitDepth (int), AudioSampleRate (int),
-            ColorSpaceTag (str), GammaTag (str), ExportAlpha (bool).
+    Args:
+    settings: Dict of render settings. Supported keys include:
+        SelectAllFrames (bool), MarkIn (int), MarkOut (int),
+        TargetDir (str), CustomName (str), UniqueFilenameStyle (0/1),
+        ExportVideo (bool), ExportAudio (bool), FormatWidth (int),
+        FormatHeight (int), FrameRate (float), VideoQuality (int/str),
+        AudioCodec (str), AudioBitDepth (int), AudioSampleRate (int),
+        ColorSpaceTag (str), GammaTag (str), ExportAlpha (bool).
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1631,13 +1756,14 @@ def set_render_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     result = project.SetRenderSettings(settings)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def set_superscale_settings_tool(enabled: bool, quality: int = 0) -> str:
     """Set SuperScale settings for the current project.
 
-        Args:
-        enabled: Whether SuperScale is enabled
-        quality: SuperScale quality (0=Auto, 1=Better Quality, 2=Smoother)
+    Args:
+    enabled: Whether SuperScale is enabled
+    quality: SuperScale quality (0=Auto, 1=Better Quality, 2=Smoother)
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1654,15 +1780,14 @@ def set_superscale_settings_tool(enabled: bool, quality: int = 0) -> str:
     else:
         return "Failed to set SuperScale settings"
 
+
 @mcp.tool()
-def start_rendering_jobs(
-    job_ids: Optional[List[str]] = None, is_interactive_mode: bool = False
-) -> Dict[str, Any]:
+def start_rendering_jobs(job_ids: Optional[List[str]] = None, is_interactive_mode: bool = False) -> Dict[str, Any]:
     """Start rendering jobs. If no job IDs specified, renders all queued jobs.
 
-        Args:
-        job_ids: Optional list of job IDs to render. If None, renders all.
-        is_interactive_mode: If True, enables interactive rendering mode.
+    Args:
+    job_ids: Optional list of job IDs to render. If None, renders all.
+    is_interactive_mode: If True, enables interactive rendering mode.
     """
     resolve = get_resolve()
     if resolve is None:

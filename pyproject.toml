@@ -43,11 +43,12 @@ davinci-resolve-mcp = "src.server:main"
 include = ["src*"]
 
 [tool.ruff]
-line-length = 120
+line-length = 220
 target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+ignore = ["E402", "F403", "E501", "N813"]  # E402: module-level import (mcp must be defined first), F403: star imports for modularity, E501: legacy long lines, N813: DaVinciResolveScript imported as dvr_script
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

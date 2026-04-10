@@ -13,15 +13,14 @@ Usage:
 VERSION = "2.2.0"
 
 import base64
-import os
-import sys
-import json
 import logging
+import os
 import platform
 import subprocess
+import sys
 import tempfile
 import time
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 # ─── Path Setup ───────────────────────────────────────────────────────────────
 
@@ -75,11 +74,7 @@ mcp = FastMCP(
 
 _py_ver = sys.version_info[:2]
 if _py_ver >= (3, 13):
-    logger.warning(
-        f"Python {_py_ver[0]}.{_py_ver[1]} detected. DaVinci Resolve's scripting API "
-        f"may not work with Python 3.13+. If scriptapp('Resolve') returns None, "
-        f"recreate the venv with Python 3.10–3.12."
-    )
+    logger.warning(f"Python {_py_ver[0]}.{_py_ver[1]} detected. DaVinci Resolve's scripting API may not work with Python 3.13+. If scriptapp('Resolve') returns None, recreate the venv with Python 3.10–3.12.")
 
 # ─── Resolve Connection (lazy) ───────────────────────────────────────────────
 
@@ -176,9 +171,7 @@ def _resolve_safe_dir(path: str) -> str:
     elif platform.system() == "Windows":
         # Check if path is under the system temp directory (e.g. AppData\Local\Temp)
         try:
-            _is_sandbox = os.path.commonpath([os.path.abspath(path), os.path.abspath(system_temp)]) == os.path.abspath(
-                system_temp
-            )
+            _is_sandbox = os.path.commonpath([os.path.abspath(path), os.path.abspath(system_temp)]) == os.path.abspath(system_temp)
         except ValueError:
             # Different drives on Windows
             _is_sandbox = False
@@ -328,15 +321,11 @@ def resolve_control(action: str, params: Optional[Dict[str, Any]] = None) -> Dic
         r = get_resolve()  # auto-launches if not running
         if r is not None:
             return _ok(message="DaVinci Resolve is running and connected.")
-        return _err(
-            "Could not connect to DaVinci Resolve. Check that Resolve Studio is installed and 'External scripting using' is set to Local in Preferences."
-        )
+        return _err("Could not connect to DaVinci Resolve. Check that Resolve Studio is installed and 'External scripting using' is set to Local in Preferences.")
 
     r = get_resolve()  # auto-launches if not running
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve after auto-launch attempt. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve after auto-launch attempt. Check that Resolve Studio is installed.")
 
     if action == "get_version":
         return {
@@ -645,9 +634,7 @@ def layout_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
 
     if action == "save":
         return {"success": bool(r.SaveLayoutPreset(p["name"]))}
@@ -686,9 +673,7 @@ def render_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
 
     if action == "import_render":
         return {"success": bool(r.ImportRenderPreset(p["path"]))}
@@ -726,9 +711,7 @@ def project_manager(action: str, params: Optional[Dict[str, Any]] = None) -> Dic
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
     pm = r.GetProjectManager()
     # NOTE: Resolve API has alternative method names:
     #   GetProjectListInCurrentFolder = GetProjectList (alias)
@@ -811,9 +794,7 @@ def project_manager_folders(action: str, params: Optional[Dict[str, Any]] = None
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
     pm = r.GetProjectManager()
     # NOTE: Resolve API has alternative method names:
     #   GetFolderListInCurrentFolder = GetFolderList (alias)
@@ -855,9 +836,7 @@ def project_manager_cloud(action: str, params: Optional[Dict[str, Any]] = None) 
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
     pm = r.GetProjectManager()
 
     if action == "create":
@@ -890,9 +869,7 @@ def project_manager_database(action: str, params: Optional[Dict[str, Any]] = Non
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
     pm = r.GetProjectManager()
     # NOTE: Resolve API has alternative method names:
     #   GetDatabaseList = GetDatabases (alias)
@@ -969,13 +946,7 @@ def project_settings(action: str, params: Optional[Dict[str, Any]] = None) -> Di
     elif action == "load_burnin_preset":
         return {"success": bool(proj.LoadBurnInPreset(p["name"]))}
     elif action == "insert_audio":
-        return {
-            "success": bool(
-                proj.InsertAudioToCurrentTrackAtPlayhead(
-                    p["media_path"], p.get("start_offset", 0), p.get("duration", 0)
-                )
-            )
-        }
+        return {"success": bool(proj.InsertAudioToCurrentTrackAtPlayhead(p["media_path"], p.get("start_offset", 0), p.get("duration", 0)))}
     elif action == "get_color_groups":
         groups = proj.GetColorGroupsList()
         return {"groups": [{"name": g.GetName()} for g in (groups or [])]}
@@ -1161,9 +1132,7 @@ def media_storage(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err(
-            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
-        )
+        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
     ms = r.GetMediaStorage()
     # NOTE: Resolve API has alternative method names:
     #   GetMountedVolumeList = GetMountedVolumes (alias)
@@ -2320,9 +2289,7 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
                     normalized = val.lower().replace("-", " ").replace("_", " ")
                     val = process_map.get(normalized, 1)
                     if val is None:
-                        return _err(
-                            f"Invalid process: {val}. Valid strings: {', '.join(sorted(valid_processes))} or integer 0-3"
-                        )
+                        return _err(f"Invalid process: {val}. Valid strings: {', '.join(sorted(valid_processes))} or integer 0-3")
             elif isinstance(val, int) and (val < 0 or val > 3):
                 return _err(f"Invalid process integer: {val}. Must be 0-3")
             results["process"] = bool(item.SetProperty("RetimeProcess", val))
@@ -2454,13 +2421,9 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
     # ── Audio ──
     elif action == "get_audio":
         keys = ["Volume", "Pan", "AudioSyncOffsetIsManual", "AudioSyncOffset"]
-        return _err(
-            "Audio properties (Volume, Pan, AudioSyncOffset) are NOT supported by the Resolve Scripting API. TimelineItem.GetProperty() does not expose audio data."
-        )
+        return _err("Audio properties (Volume, Pan, AudioSyncOffset) are NOT supported by the Resolve Scripting API. TimelineItem.GetProperty() does not expose audio data.")
     elif action == "set_audio":
-        return _err(
-            "Audio properties (Volume, Pan, AudioSyncOffset) are NOT supported by the Resolve Scripting API. TimelineItem.SetProperty() does not support audio data."
-        )
+        return _err("Audio properties (Volume, Pan, AudioSyncOffset) are NOT supported by the Resolve Scripting API. TimelineItem.SetProperty() does not support audio data.")
 
     # ── Keyframes ──
     elif action == "get_keyframes":
@@ -3091,9 +3054,7 @@ def gallery_stills(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
         if delete_after:
             album.DeleteStills([still])
         if not export_ok:
-            return _err(
-                "ExportStills failed — ensure the Gallery panel is open on the Color page (Workspace > Gallery)"
-            )
+            return _err("ExportStills failed — ensure the Gallery panel is open on the Color page (Workspace > Gallery)")
         # Wait for filesystem
         time.sleep(0.3)
         # Find new files
@@ -3367,9 +3328,7 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
 
     comp = fusion.GetCurrentComp()
     if not comp:
-        return _err(
-            "No active Fusion composition. Open a clip in the Fusion page first, or use timeline_item_fusion to add a comp."
-        )
+        return _err("No active Fusion composition. Open a clip in the Fusion page first, or use timeline_item_fusion to add a comp.")
 
     # --- Node Management ---
     if action == "add_tool":
@@ -3650,12 +3609,10 @@ if __name__ == "__main__":
         logger.info("Starting full 342-tool server...")
         import importlib
 
-        spec = importlib.util.spec_from_file_location(
-            "resolve_mcp_server", os.path.join(current_dir, "resolve_mcp_server.py")
-        )
+        spec = importlib.util.spec_from_file_location("resolve_mcp_server", os.path.join(current_dir, "resolve_mcp_server.py"))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         sys.exit(0)
 
-    logger.info(f"Starting DaVinci Resolve MCP Server (27 compound tools)")
+    logger.info("Starting DaVinci Resolve MCP Server (27 compound tools)")
     mcp.run()

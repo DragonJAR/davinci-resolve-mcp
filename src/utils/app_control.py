@@ -8,21 +8,18 @@ This module provides functions for controlling DaVinci Resolve application:
 - Handling basic application functions
 """
 
-import os
 import logging
-import time
-import sys
 import platform
 import subprocess
-from typing import Dict, Any, Optional, Union, List
+import sys
+import time
+from typing import Any, Dict
 
 # Configure logging
 logger = logging.getLogger("davinci-resolve-mcp.app_control")
 
 
-def quit_resolve_app(
-    resolve_obj, force: bool = False, save_project: bool = True
-) -> bool:
+def quit_resolve_app(resolve_obj, force: bool = False, save_project: bool = True) -> bool:
     """
     Quit DaVinci Resolve application.
 
@@ -125,17 +122,17 @@ def get_app_state(resolve_obj) -> Dict[str, Any]:
     if resolve_obj:
         try:
             state["version"] = resolve_obj.GetVersionString()
-        except:
+        except Exception:
             pass
 
         try:
             state["product_name"] = resolve_obj.GetProductName()
-        except:
+        except Exception:
             pass
 
         try:
             state["current_page"] = resolve_obj.GetCurrentPage()
-        except:
+        except Exception:
             state["current_page"] = "Unknown"
 
         # Get project manager and project information
@@ -183,9 +180,7 @@ def restart_resolve_app(resolve_obj, wait_seconds: int = 5) -> bool:
             resolve_path = "/Applications/DaVinci Resolve/DaVinci Resolve.app"
         elif platform.system().lower() == "windows":
             # Default path, may need to be customized
-            resolve_path = (
-                r"C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe"
-            )
+            resolve_path = r"C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe"
         elif platform.system().lower() == "linux":
             # Default path, may need to be customized
             resolve_path = "/opt/resolve/bin/resolve"
@@ -235,9 +230,7 @@ def open_project_settings(resolve_obj) -> bool:
             return False
 
         # Open Project Settings dialog
-        if hasattr(ui_manager, "OpenProjectSettings") and callable(
-            getattr(ui_manager, "OpenProjectSettings")
-        ):
+        if hasattr(ui_manager, "OpenProjectSettings") and callable(getattr(ui_manager, "OpenProjectSettings")):
             ui_manager.OpenProjectSettings()
             return True
 
@@ -281,9 +274,7 @@ def open_preferences(resolve_obj) -> bool:
             return False
 
         # Open Preferences dialog
-        if hasattr(ui_manager, "OpenPreferences") and callable(
-            getattr(ui_manager, "OpenPreferences")
-        ):
+        if hasattr(ui_manager, "OpenPreferences") and callable(getattr(ui_manager, "OpenPreferences")):
             ui_manager.OpenPreferences()
             return True
 

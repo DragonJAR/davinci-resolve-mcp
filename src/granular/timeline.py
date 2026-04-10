@@ -2,7 +2,46 @@
 """Granular server — timeline tools."""
 
 # ── Shared mcp server (defined in granular/__init__.py) ───────────
+# ── Imports ──────────────────────────────────────────────────────
+import logging
+import os
+import platform
+import subprocess
+import tempfile
+import time
+from typing import Any, Dict, List, Optional
+
 from granular import mcp
+from src.utils.app_control import (
+    dvr_script,
+    get_app_state,
+)
+from src.utils.cloud_operations import (
+    get_cloud_project_list,
+)
+from src.utils.layout_presets import (
+    list_layout_presets,
+)
+
+# ── Utility imports (extracted from monolithic server) ───────────
+from src.utils.object_inspection import (
+    inspect_object,
+)
+from src.utils.project_properties import (
+    get_all_project_properties,
+    get_color_settings,
+    get_project_info,
+    get_project_metadata,
+    get_project_property,
+    get_superscale_settings,
+    get_timeline_format_settings,
+    set_timeline_format,
+)
+
+# ── Shared mcp server (defined in granular/__init__.py) ───────────
+# ── Logger ──────────────────────────────────────────────────────
+logger = logging.getLogger(__name__)
+
 
 # ── Helpers ──────────────────────────────────────────────────────
 def _find_clip_by_id(folder, target_id):
@@ -14,6 +53,8 @@ def _find_clip_by_id(folder, target_id):
         if found:
             return found
     return None
+
+
 def _find_clips_by_ids(folder, ids_set):
     found = []
     for clip in folder.GetClipList() or []:
@@ -22,6 +63,8 @@ def _find_clips_by_ids(folder, ids_set):
     for sub in folder.GetSubFolderList() or []:
         found.extend(_find_clips_by_ids(sub, ids_set))
     return found
+
+
 def _get_mp():
     resolve = get_resolve()
     if resolve is None:
@@ -33,6 +76,8 @@ def _get_mp():
     if not mp:
         return project, None, {"error": "Failed to get MediaPool"}
     return project, mp, None
+
+
 def _get_timeline():
     resolve = get_resolve()
     if resolve is None:
@@ -44,16 +89,18 @@ def _get_timeline():
     if not tl:
         return project, None, {"error": "No current timeline"}
     return project, tl, None
+
+
 def _get_timeline_item(track_type="video", track_index=1, item_index=0):
     _, tl, err = _get_timeline()
     if err:
         return None, err
     items = tl.GetItemListInTrack(track_type, track_index)
     if not items or item_index >= len(items):
-        return None, {
-            "error": f"No item at index {item_index} on {track_type} track {track_index}"
-        }
+        return None, {"error": f"No item at index {item_index} on {track_type} track {track_index}"}
     return items[item_index], None
+
+
 def _launch_resolve():
     """Launch DaVinci Resolve and wait for it to become available."""
     sys_name = platform.system().lower()
@@ -82,6 +129,8 @@ def _launch_resolve():
             return True
     logger.warning("Resolve did not respond within 60s after launch")
     return False
+
+
 def _navigate_to_folder(mp, folder_path):
     root = mp.GetRootFolder()
     if not folder_path or folder_path in ("Master", "/", ""):
@@ -100,6 +149,8 @@ def _navigate_to_folder(mp, folder_path):
         if not found:
             return None
     return current
+
+
 def _resolve_safe_dir(path):
     """Redirect sandbox/temp paths that Resolve can't access to ~/Desktop/resolve-stills.
 
@@ -114,14 +165,14 @@ def _resolve_safe_dir(path):
         _is_sandbox = path.startswith("/tmp") or path.startswith("/var/tmp")
     elif platform.system() == "Windows":
         try:
-            _is_sandbox = os.path.commonpath(
-                [os.path.abspath(path), os.path.abspath(system_temp)]
-            ) == os.path.abspath(system_temp)
+            _is_sandbox = os.path.commonpath([os.path.abspath(path), os.path.abspath(system_temp)]) == os.path.abspath(system_temp)
         except ValueError:
             _is_sandbox = False
     if _is_sandbox:
         return os.path.join(os.path.expanduser("~"), "Documents", "resolve-stills")
     return path
+
+
 def _serialize_value(value):
     """Helper to serialize Resolve API objects to JSON-safe values."""
     if value is None:
@@ -134,25 +185,29 @@ def _serialize_value(value):
         return [_serialize_value(v) for v in value]
     # Resolve API object — return string representation
     return str(value)
+
+
 def _try_connect():
     """Attempt to connect to Resolve once. Returns resolve object or None."""
     global resolve
     try:
         resolve = dvr_script.scriptapp("Resolve")
         if resolve:
-            logger.info(
-                f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}"
-            )
+            logger.info(f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}")
         return resolve
     except Exception as e:
         logger.error(f"Connection error: {e}")
         resolve = None
         return None
+
+
 def _validate_path(user_path: str) -> str:
     """Validate that user_path doesn't contain path traversal."""
     if ".." in user_path:
         raise ValueError(f"Path traversal detected in: {user_path}")
     return os.path.realpath(user_path)
+
+
 def find_clip_by_id(folder, target_id):
     for clip in folder.GetClipList() or []:
         if clip.GetUniqueId() == target_id:
@@ -162,6 +217,8 @@ def find_clip_by_id(folder, target_id):
         if found:
             return found
     return None
+
+
 def get_all_media_pool_clips(media_pool):
     """Get all clips from media pool recursively including subfolders."""
     clips = []
@@ -178,6 +235,8 @@ def get_all_media_pool_clips(media_pool):
 
     process_folder(root_folder)
     return clips
+
+
 def get_all_media_pool_folders(media_pool):
     """Get all folders from media pool recursively."""
     folders = []
@@ -192,6 +251,8 @@ def get_all_media_pool_folders(media_pool):
 
     process_folder(root_folder)
     return folders
+
+
 def get_app_state_endpoint() -> Dict[str, Any]:
     """Get DaVinci Resolve application state information."""
     resolve = get_resolve()
@@ -199,6 +260,8 @@ def get_app_state_endpoint() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve", "connected": False}
 
     return get_app_state(resolve)
+
+
 def get_cache_settings() -> Dict[str, Any]:
     """Get current cache settings from the project."""
     pm, current_project = get_current_project()
@@ -226,6 +289,8 @@ def get_cache_settings() -> Dict[str, Any]:
         return settings
     except Exception as e:
         return {"error": f"Failed to get cache settings: {str(e)}"}
+
+
 def get_cloud_projects() -> Dict[str, Any]:
     """Get list of available cloud projects."""
     resolve = get_resolve()
@@ -233,6 +298,8 @@ def get_cloud_projects() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve", "success": False}
 
     return get_cloud_project_list(resolve)
+
+
 def get_color_presets() -> List[Dict[str, Any]]:
     """Get all available color presets in the current project."""
     pm, current_project = get_current_project()
@@ -284,6 +351,8 @@ def get_color_presets() -> List[Dict[str, Any]]:
         if current_page != "color":
             resolve.OpenPage(current_page)
         return [{"error": f"Error retrieving color presets: {str(e)}"}]
+
+
 def get_color_settings_endpoint() -> Dict[str, Any]:
     """Get color science and color space settings for the current project."""
     pm, current_project = get_current_project()
@@ -291,6 +360,8 @@ def get_color_settings_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_color_settings(current_project)
+
+
 def get_color_wheel_params(node_index: int = None) -> Dict[str, Any]:
     """Get color wheel parameters for a specific node.
 
@@ -298,15 +369,21 @@ def get_color_wheel_params(node_index: int = None) -> Dict[str, Any]:
         node_index: Index of the node to get color wheels from (uses current node if None)
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_current_color_node() -> Dict[str, Any]:
     """Get information about the current node in the color page."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_current_page() -> str:
     """Get the current page open in DaVinci Resolve (Edit, Color, Fusion, etc.)."""
     resolve = get_resolve()
     if resolve is None:
         return "Error: Not connected to DaVinci Resolve"
     return resolve.GetCurrentPage()
+
+
 def get_current_project():
     """Get current project with lazy connection and null guards."""
     pm = get_project_manager()
@@ -314,6 +391,8 @@ def get_current_project():
         return None, None
     proj = pm.GetCurrentProject()
     return pm, proj
+
+
 def get_current_project_name() -> str:
     """Get the name of the currently open project."""
     pm, current_project = get_current_project()
@@ -321,6 +400,8 @@ def get_current_project_name() -> str:
         return "No project currently open"
 
     return current_project.GetName()
+
+
 def get_current_timeline() -> Dict[str, Any]:
     """Get information about the current timeline."""
     pm, current_project = get_current_project()
@@ -339,12 +420,12 @@ def get_current_timeline() -> Dict[str, Any]:
             "width": current_timeline.GetSetting("timelineResolutionWidth"),
             "height": current_timeline.GetSetting("timelineResolutionHeight"),
         },
-        "duration": current_timeline.GetEndFrame()
-        - current_timeline.GetStartFrame()
-        + 1,
+        "duration": current_timeline.GetEndFrame() - current_timeline.GetStartFrame() + 1,
     }
 
     return result
+
+
 def get_layout_presets() -> List[Dict[str, Any]]:
     """Get all available layout presets for DaVinci Resolve."""
     resolve = get_resolve()
@@ -352,6 +433,8 @@ def get_layout_presets() -> List[Dict[str, Any]]:
         return {"error": "Not connected to DaVinci Resolve"}
 
     return list_layout_presets(layout_type="ui")
+
+
 def get_lut_formats() -> Dict[str, Any]:
     """Get available LUT export formats and sizes."""
     formats = {
@@ -393,6 +476,8 @@ def get_lut_formats() -> Dict[str, Any]:
         ],
     }
     return formats
+
+
 def get_media_pool_bin_contents(bin_name: str) -> List[Dict[str, Any]]:
     """Get contents of a specific bin/folder in the media pool.
 
@@ -400,6 +485,8 @@ def get_media_pool_bin_contents(bin_name: str) -> List[Dict[str, Any]]:
         bin_name: The name of the bin to get contents from. Use 'Master' for the root folder.
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_project_info_endpoint() -> Dict[str, Any]:
     """Get comprehensive information about the current project."""
     pm, current_project = get_current_project()
@@ -407,6 +494,8 @@ def get_project_info_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_project_info(current_project)
+
+
 def get_project_manager():
     """Get ProjectManager with lazy connection and null guard."""
     r = get_resolve()
@@ -414,6 +503,8 @@ def get_project_manager():
         return None
     pm = r.GetProjectManager()
     return pm
+
+
 def get_project_metadata_endpoint() -> Dict[str, Any]:
     """Get metadata for the current project."""
     pm, current_project = get_current_project()
@@ -421,6 +512,8 @@ def get_project_metadata_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_project_metadata(current_project)
+
+
 def get_project_properties_endpoint() -> Dict[str, Any]:
     """Get all project properties for the current project."""
     pm, current_project = get_current_project()
@@ -428,6 +521,8 @@ def get_project_properties_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_all_project_properties(current_project)
+
+
 def get_project_property_endpoint(property_name: str) -> Dict[str, Any]:
     """Get a specific project property value.
 
@@ -440,6 +535,8 @@ def get_project_property_endpoint(property_name: str) -> Dict[str, Any]:
 
     value = get_project_property(current_project, property_name)
     return {property_name: value}
+
+
 def get_project_setting(setting_name: str) -> Dict[str, Any]:
     """Get a specific project setting by name.
 
@@ -456,6 +553,8 @@ def get_project_setting(setting_name: str) -> Dict[str, Any]:
         return {setting_name: value}
     except Exception as e:
         return {"error": f"Failed to get project setting '{setting_name}': {str(e)}"}
+
+
 def get_project_settings() -> Dict[str, Any]:
     """Get all project settings from the current project."""
     pm, current_project = get_current_project()
@@ -467,12 +566,18 @@ def get_project_settings() -> Dict[str, Any]:
         return current_project.GetSetting("")
     except Exception as e:
         return {"error": f"Failed to get project settings: {str(e)}"}
+
+
 def get_render_presets() -> List[Dict[str, Any]]:
     """Get all available render presets in the current project."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_render_queue_status() -> Dict[str, Any]:
     """Get the status of jobs in the render queue."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def get_resolve():
     """Lazy connection to Resolve — connects on first tool call, auto-launches if needed."""
     global resolve
@@ -483,12 +588,16 @@ def get_resolve():
     logger.info("Resolve not running, attempting to launch automatically...")
     _launch_resolve()
     return resolve
+
+
 def get_resolve_version() -> str:
     """Get DaVinci Resolve version information."""
     resolve = get_resolve()
     if resolve is None:
         return "Error: Not connected to DaVinci Resolve"
     return f"{resolve.GetProductName()} {resolve.GetVersionString()}"
+
+
 def get_superscale_settings_endpoint() -> Dict[str, Any]:
     """Get SuperScale settings for the current project."""
     pm, current_project = get_current_project()
@@ -496,6 +605,8 @@ def get_superscale_settings_endpoint() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_superscale_settings(current_project)
+
+
 def get_timeline_format() -> Dict[str, Any]:
     """Get timeline format settings for the current project."""
     pm, current_project = get_current_project()
@@ -503,9 +614,9 @@ def get_timeline_format() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return get_timeline_format_settings(current_project)
-def get_timeline_item_keyframes(
-    timeline_item_id: str, property_name: str
-) -> Dict[str, Any]:
+
+
+def get_timeline_item_keyframes(timeline_item_id: str, property_name: str) -> Dict[str, Any]:
     """Get keyframes for a specific timeline item by ID.
 
     Args:
@@ -597,10 +708,7 @@ def get_timeline_item_keyframes(
                         keyframes[prop].append({"frame": frame_pos, "value": value})
 
         # Check if it has audio properties (could be video with audio or audio-only)
-        if (
-            timeline_item.GetType() == "Audio"
-            or timeline_item.GetMediaType() == "Audio"
-        ):
+        if timeline_item.GetType() == "Audio" or timeline_item.GetMediaType() == "Audio":
             # Check each audio property for keyframes
             for prop in audio_properties:
                 if (timeline_item.GetKeyframeCount(prop) or 0) > 0:
@@ -644,6 +752,8 @@ def get_timeline_item_keyframes(
 
     except Exception as e:
         return {"error": f"Error getting timeline item keyframes: {str(e)}"}
+
+
 def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
     """Get properties of a specific timeline item by ID.
 
@@ -710,9 +820,7 @@ def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
                     "x": timeline_item.GetProperty("Pan"),
                     "y": timeline_item.GetProperty("Tilt"),
                 },
-                "zoom": timeline_item.GetProperty(
-                    "ZoomX"
-                ),  # ZoomX/ZoomY can be different for non-uniform scaling
+                "zoom": timeline_item.GetProperty("ZoomX"),  # ZoomX/ZoomY can be different for non-uniform scaling
                 "zoom_x": timeline_item.GetProperty("ZoomX"),
                 "zoom_y": timeline_item.GetProperty("ZoomY"),
                 "rotation": timeline_item.GetProperty("Rotation"),
@@ -758,10 +866,7 @@ def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
             }
 
         # Audio-specific properties
-        if (
-            timeline_item.GetType() == "Audio"
-            or timeline_item.GetMediaType() == "Audio"
-        ):
+        if timeline_item.GetType() == "Audio" or timeline_item.GetMediaType() == "Audio":
             properties["audio"] = {
                 "volume": timeline_item.GetProperty("Volume"),
                 "pan": timeline_item.GetProperty("Pan"),
@@ -774,6 +879,8 @@ def get_timeline_item_properties(timeline_item_id: str) -> Dict[str, Any]:
 
     except Exception as e:
         return {"error": f"Error getting timeline item properties: {str(e)}"}
+
+
 def get_timeline_items() -> List[Dict[str, Any]]:
     """Get all items in the current timeline with their IDs and basic properties."""
     pm, current_project = get_current_project()
@@ -831,6 +938,8 @@ def get_timeline_items() -> List[Dict[str, Any]]:
         return items
     except Exception as e:
         return [{"error": f"Error listing timeline items: {str(e)}"}]
+
+
 def get_timeline_tracks(timeline_name: str = None) -> Dict[str, Any]:
     """Get the track structure of a timeline.
 
@@ -838,6 +947,8 @@ def get_timeline_tracks(timeline_name: str = None) -> Dict[str, Any]:
         timeline_name: Optional name of the timeline to get tracks from. Uses current timeline if None.
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def inspect_current_project_object() -> Dict[str, Any]:
     """Inspect the current project object and return its methods and properties."""
     pm, current_project = get_current_project()
@@ -845,6 +956,8 @@ def inspect_current_project_object() -> Dict[str, Any]:
         return {"error": "No project currently open"}
 
     return inspect_object(current_project)
+
+
 def inspect_current_timeline_object() -> Dict[str, Any]:
     """Inspect the current timeline object and return its methods and properties."""
     pm, current_project = get_current_project()
@@ -856,6 +969,8 @@ def inspect_current_timeline_object() -> Dict[str, Any]:
         return {"error": "No timeline currently active"}
 
     return inspect_object(current_timeline)
+
+
 def inspect_media_pool_object() -> Dict[str, Any]:
     """Inspect the media pool object and return its methods and properties."""
     pm, current_project = get_current_project()
@@ -867,6 +982,8 @@ def inspect_media_pool_object() -> Dict[str, Any]:
         return {"error": "Failed to get Media Pool"}
 
     return inspect_object(media_pool)
+
+
 def inspect_project_manager_object() -> Dict[str, Any]:
     """Inspect the project manager object and return its methods and properties."""
     project_manager = get_project_manager()
@@ -874,6 +991,8 @@ def inspect_project_manager_object() -> Dict[str, Any]:
         return {"error": "Failed to get Project Manager"}
 
     return inspect_object(project_manager)
+
+
 def inspect_resolve_object() -> Dict[str, Any]:
     """Inspect the main resolve object and return its methods and properties."""
     resolve = get_resolve()
@@ -881,9 +1000,13 @@ def inspect_resolve_object() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve"}
 
     return inspect_object(resolve)
+
+
 def list_media_pool_bins() -> List[Dict[str, Any]]:
     """List all bins/folders in the media pool."""
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
 def list_media_pool_clips() -> List[Dict[str, Any]]:
     """List all clips in the root folder of the media pool."""
     pm, current_project = get_current_project()
@@ -914,6 +1037,8 @@ def list_media_pool_clips() -> List[Dict[str, Any]]:
         )
 
     return result
+
+
 def list_projects() -> List[str]:
     """List all available projects in the current database."""
     project_manager = get_project_manager()
@@ -924,6 +1049,8 @@ def list_projects() -> List[str]:
 
     # Filter out any empty strings that might be in the list
     return [p for p in projects if p]
+
+
 def list_timeline_clips() -> List[Dict[str, Any]]:
     """List all clips in the current timeline."""
     pm, current_project = get_current_project()
@@ -980,6 +1107,8 @@ def list_timeline_clips() -> List[Dict[str, Any]]:
         return clips
     except Exception as e:
         return [{"error": f"Error listing timeline clips: {str(e)}"}]
+
+
 def list_timelines() -> List[str]:
     """List all timelines in the current project."""
     logger.info("Received request to list timelines")
@@ -1016,32 +1145,19 @@ def list_timelines() -> List[str]:
 
     logger.info(f"Returning {len(timelines)} timelines: {', '.join(timelines)}")
     return timelines
-def process_folder(folder):
-    folders.append(folder)
 
-    sub_folders = folder.GetSubFolderList()
-    for sub_folder in sub_folders:
-        process_folder(sub_folder)
-def search(folder):
-    for clip in folder.GetClipList() or []:
-        if clip.GetName() == clip_name:
-            return clip
-    for sub in folder.GetSubFolderList() or []:
-        found = search(sub)
-        if found:
-            return found
-    return None
 
 # ── Tools ────────────────────────────────────────────────────────
 @mcp.tool()
 def add_clip_to_timeline(clip_name: str, timeline_name: str = None) -> str:
     """Add a media pool clip to the timeline.
 
-        Args:
-        clip_name: Name of the clip in the media pool
-        timeline_name: Optional timeline to target (uses current if not specified)
+    Args:
+    clip_name: Name of the clip in the media pool
+    timeline_name: Optional timeline to target (uses current if not specified)
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
 
 @mcp.tool()
 def add_marker(frame: int = None, color: str = "Blue", note: str = "") -> str:
@@ -1055,6 +1171,7 @@ def add_marker(frame: int = None, color: str = "Blue", note: str = "") -> str:
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
 
+
 @mcp.tool()
 def create_empty_timeline(
     name: str,
@@ -1067,27 +1184,26 @@ def create_empty_timeline(
 ) -> str:
     """Create a new timeline with the given name and custom settings.
 
-        Args:
-        name: The name for the new timeline
-        frame_rate: Optional frame rate (e.g. "24", "29.97", "30", "60")
-        resolution_width: Optional width in pixels (e.g. 1920)
-        resolution_height: Optional height in pixels (e.g. 1080)
-        start_timecode: Optional start timecode (e.g. "01:00:00:00")
-        video_tracks: Optional number of video tracks (Default is project setting)
-        audio_tracks: Optional number of audio tracks (Default is project setting)
+    Args:
+    name: The name for the new timeline
+    frame_rate: Optional frame rate (e.g. "24", "29.97", "30", "60")
+    resolution_width: Optional width in pixels (e.g. 1920)
+    resolution_height: Optional height in pixels (e.g. 1080)
+    start_timecode: Optional start timecode (e.g. "01:00:00:00")
+    video_tracks: Optional number of video tracks (Default is project setting)
+    audio_tracks: Optional number of audio tracks (Default is project setting)
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
 
+
 @mcp.tool()
-def create_timeline_from_clips(
-    name: str, clip_ids: List[str] = None, clip_infos: List[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def create_timeline_from_clips(name: str, clip_ids: List[str] = None, clip_infos: List[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Create a new timeline from specified media pool clips.
 
-        Args:
-        name: Name for the new timeline.
-        clip_ids: List of MediaPoolItem unique IDs to include. If None, uses selected clips.
-        clip_infos: Optional list of clip info dicts for advanced control.
+    Args:
+    name: Name for the new timeline.
+    clip_ids: List of MediaPoolItem unique IDs to include. If None, uses selected clips.
+    clip_infos: Optional list of clip info dicts for advanced control.
     """
     _, mp, err = _get_mp()
     if err:
@@ -1116,19 +1232,19 @@ def create_timeline_from_clips(
         }
     return {"success": False, "error": "Failed to create timeline from clips"}
 
+
 @mcp.tool()
 def delete_timeline(name: str) -> str:
     """Delete a timeline by name.
 
-        Args:
-        name: The name of the timeline to delete
+    Args:
+    name: The name of the timeline to delete
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
 
+
 @mcp.tool()
-def get_item_list_in_track(
-    track_type: str = "video", track_index: int = 1
-) -> Dict[str, Any]:
+def get_item_list_in_track(track_type: str = "video", track_index: int = 1) -> Dict[str, Any]:
     """Get item list in a specific track.
 
         Args:
@@ -1150,10 +1266,9 @@ def get_item_list_in_track(
     except Exception as e:
         return {"error": f"Failed to get item list in track: {str(e)}"}
 
+
 @mcp.tool()
-def get_items_in_track(
-    track_type: str = "video", track_index: int = 1
-) -> Dict[str, Any]:
+def get_items_in_track(track_type: str = "video", track_index: int = 1) -> Dict[str, Any]:
     """Get all items in a specific track.
 
         Args:
@@ -1175,12 +1290,13 @@ def get_items_in_track(
     except Exception as e:
         return {"error": f"Failed to get items in track: {str(e)}"}
 
+
 @mcp.tool()
 def get_timeline_by_index(index: int) -> Dict[str, Any]:
     """Get a timeline by its 1-based index.
 
-        Args:
-        index: 1-based timeline index.
+    Args:
+    index: 1-based timeline index.
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1198,15 +1314,14 @@ def get_timeline_by_index(index: int) -> Dict[str, Any]:
         }
     return {"error": f"No timeline at index {index}"}
 
+
 @mcp.tool()
-def import_timeline_from_file(
-    file_path: str, import_options: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def import_timeline_from_file(file_path: str, import_options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Import a timeline from a file (AAF, EDL, XML, FCPXML, DRT, ADL, OTIO).
 
-        Args:
-        file_path: Absolute path to the timeline file.
-        import_options: Optional dict of import options.
+    Args:
+    file_path: Absolute path to the timeline file.
+    import_options: Optional dict of import options.
     """
     _, mp, err = _get_mp()
     if err:
@@ -1223,18 +1338,20 @@ def import_timeline_from_file(
         }
     return {"success": False, "error": f"Failed to import timeline from '{file_path}'"}
 
+
 @mcp.tool()
 def list_timelines_tool() -> List[str]:
     """List all timelines in the current project as a tool."""
     logger.info("Received request to list timelines via tool")
     return list_timelines()
 
+
 @mcp.tool()
 def set_current_timeline(name: str) -> str:
     """Switch to a timeline by name.
 
-        Args:
-        name: The name of the timeline to set as current
+    Args:
+    name: The name of the timeline to set as current
     """
     resolve = get_resolve()
     if resolve is None:
@@ -1264,17 +1381,16 @@ def set_current_timeline(name: str) -> str:
 
     return f"Error: Timeline '{name}' not found"
 
+
 @mcp.tool()
-def set_timeline_format_tool(
-    width: int, height: int, frame_rate: float, interlaced: bool = False
-) -> str:
+def set_timeline_format_tool(width: int, height: int, frame_rate: float, interlaced: bool = False) -> str:
     """Set timeline format (resolution and frame rate).
 
-        Args:
-        width: Timeline width in pixels
-        height: Timeline height in pixels
-        frame_rate: Timeline frame rate
-        interlaced: Whether the timeline should use interlaced processing
+    Args:
+    width: Timeline width in pixels
+    height: Timeline height in pixels
+    frame_rate: Timeline frame rate
+    interlaced: Whether the timeline should use interlaced processing
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1288,15 +1404,16 @@ def set_timeline_format_tool(
     else:
         return "Failed to set timeline format"
 
+
 @mcp.tool()
 def set_timeline_setting(setting_name: str, setting_value: str) -> Dict[str, Any]:
     """Set a timeline setting value.
 
-        Args:
-        setting_name: Name of the timeline setting to set (e.g. 'useCustomSettings', 'timelineFrameRate',
-                      'timelineResolutionWidth', 'timelineResolutionHeight', 'timelineOutputResolutionWidth',
-                      'timelineOutputResolutionHeight', 'colorSpaceTimeline', 'colorSpaceOutput').
-        setting_value: Value to set for the setting (string).
+    Args:
+    setting_name: Name of the timeline setting to set (e.g. 'useCustomSettings', 'timelineFrameRate',
+                  'timelineResolutionWidth', 'timelineResolutionHeight', 'timelineOutputResolutionWidth',
+                  'timelineOutputResolutionHeight', 'colorSpaceTimeline', 'colorSpaceOutput').
+    setting_value: Value to set for the setting (string).
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1307,6 +1424,7 @@ def set_timeline_setting(setting_name: str, setting_value: str) -> Dict[str, Any
         "setting_name": setting_name,
         "setting_value": setting_value,
     }
+
 
 @mcp.tool()
 def ti_copy_grades(
@@ -1339,6 +1457,7 @@ def ti_copy_grades(
     result = source.CopyGrades(targets)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_add_marker(
     frame_id: int,
@@ -1365,17 +1484,15 @@ def timeline_add_marker(
     result = tl.AddMarker(frame_id, color, name, note, duration, custom_data)
     return {"success": bool(result)}
 
+
 @mcp.tool()
-def timeline_add_track(
-    track_type: str, sub_track_type: str = "", new_track_options: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def timeline_add_track(track_type: str, sub_track_type: str = "", new_track_options: Dict[str, Any] = None) -> Dict[str, Any]:
     """Add a new track to the timeline.
 
         Args:
         track_type: 'video', 'audio', or 'subtitle'.
         Valid: "video", "audio", "subtitle"
     sub_track_type: For audio: 'mono', 'stereo', '5.1', '7.1', 'adaptive'. Default: ''.
-        Valid: video", "audio", "subtitle
     new_track_options: Optional dict of track creation options.
     """
     _, tl, err = _get_timeline()
@@ -1388,6 +1505,7 @@ def timeline_add_track(
         track = tl.AddTrack(track_type, sub_track_type)
     return {"success": bool(track), "track_index": track.GetIndex() if track else None}
 
+
 @mcp.tool()
 def timeline_analyze_dolby_vision() -> Dict[str, Any]:
     """Analyze Dolby Vision for the current timeline."""
@@ -1396,6 +1514,7 @@ def timeline_analyze_dolby_vision() -> Dict[str, Any]:
         return err
     result = tl.AnalyzeDolbyVision()
     return {"success": bool(result)}
+
 
 @mcp.tool()
 def timeline_clear_mark_in_out() -> Dict[str, Any]:
@@ -1406,6 +1525,7 @@ def timeline_clear_mark_in_out() -> Dict[str, Any]:
     result = tl.ClearMarkInOut()
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_convert_to_stereo() -> Dict[str, Any]:
     """Convert the current timeline to stereo."""
@@ -1415,10 +1535,9 @@ def timeline_convert_to_stereo() -> Dict[str, Any]:
     result = tl.ConvertTimelineToStereo()
     return {"success": bool(result)}
 
+
 @mcp.tool()
-def timeline_create_compound_clip(
-    clip_ids: List[str], track_type: str = "video", track_index: int = 1
-) -> Dict[str, Any]:
+def timeline_create_compound_clip(clip_ids: List[str], track_type: str = "video", track_index: int = 1) -> Dict[str, Any]:
     """Create a compound clip from selected items.
 
         Args:
@@ -1439,10 +1558,9 @@ def timeline_create_compound_clip(
         return {"success": True}
     return {"success": False, "error": "Failed to create compound clip"}
 
+
 @mcp.tool()
-def timeline_create_fusion_clip(
-    clip_ids: List[str], track_type: str = "video", track_index: int = 1
-) -> Dict[str, Any]:
+def timeline_create_fusion_clip(clip_ids: List[str], track_type: str = "video", track_index: int = 1) -> Dict[str, Any]:
     """Create a Fusion clip from selected items.
 
         Args:
@@ -1463,15 +1581,14 @@ def timeline_create_fusion_clip(
         return {"success": True}
     return {"success": False, "error": "Failed to create Fusion clip"}
 
+
 @mcp.tool()
-def timeline_create_subtitles_from_audio(
-    language: str = "auto", preset: str = "default"
-) -> Dict[str, Any]:
+def timeline_create_subtitles_from_audio(language: str = "auto", preset: str = "default") -> Dict[str, Any]:
     """Create subtitles from audio in the current timeline.
 
-        Args:
-        language: Language for captioning ('auto', 'english', 'french', etc.). Default: 'auto'.
-        preset: Caption preset ('default', 'teletext', 'netflix'). Default: 'default'.
+    Args:
+    language: Language for captioning ('auto', 'english', 'french', etc.). Default: 'auto'.
+    preset: Caption preset ('default', 'teletext', 'netflix'). Default: 'default'.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1480,10 +1597,9 @@ def timeline_create_subtitles_from_audio(
     result = tl.CreateSubtitlesFromAudio(settings)
     return {"success": bool(result)}
 
+
 @mcp.tool()
-def timeline_delete_clips(
-    clip_ids: List[str], track_type: str = "video", track_index: int = 1
-) -> Dict[str, Any]:
+def timeline_delete_clips(clip_ids: List[str], track_type: str = "video", track_index: int = 1) -> Dict[str, Any]:
     """Delete clips from the timeline.
 
         Args:
@@ -1504,12 +1620,13 @@ def timeline_delete_clips(
     result = tl.DeleteClips(to_delete)
     return {"success": bool(result), "deleted": len(to_delete)}
 
+
 @mcp.tool()
 def timeline_delete_marker_at_frame(frame_id: int) -> Dict[str, Any]:
     """Delete a timeline marker at a specific frame.
 
-        Args:
-        frame_id: Frame number of the marker.
+    Args:
+    frame_id: Frame number of the marker.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1517,12 +1634,13 @@ def timeline_delete_marker_at_frame(frame_id: int) -> Dict[str, Any]:
     result = tl.DeleteMarkerAtFrame(frame_id)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_delete_marker_by_custom_data(custom_data: str) -> Dict[str, Any]:
     """Delete a timeline marker by custom data.
 
-        Args:
-        custom_data: Custom data of the marker to delete.
+    Args:
+    custom_data: Custom data of the marker to delete.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1530,19 +1648,21 @@ def timeline_delete_marker_by_custom_data(custom_data: str) -> Dict[str, Any]:
     result = tl.DeleteMarkerByCustomData(custom_data)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_delete_markers_by_color(color: str) -> Dict[str, Any]:
     """Delete all timeline markers of a specific color.
 
-        Args:
-        color: Color of markers to delete. Use '' to delete all.
-        Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
+    Args:
+    color: Color of markers to delete. Use '' to delete all.
+    Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
     """
     _, tl, err = _get_timeline()
     if err:
         return err
     result = tl.DeleteMarkersByColor(color)
     return {"success": bool(result)}
+
 
 @mcp.tool()
 def timeline_delete_track(track_type: str, track_index: int) -> Dict[str, Any]:
@@ -1559,6 +1679,7 @@ def timeline_delete_track(track_type: str, track_index: int) -> Dict[str, Any]:
     result = tl.DeleteTrack(track_type, track_index)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_detect_scene_cuts() -> Dict[str, Any]:
     """Detect scene cuts in the current timeline."""
@@ -1567,6 +1688,7 @@ def timeline_detect_scene_cuts() -> Dict[str, Any]:
         return err
     result = tl.DetectSceneCuts()
     return {"success": bool(result)}
+
 
 @mcp.tool()
 def timeline_duplicate() -> Dict[str, Any]:
@@ -1583,47 +1705,37 @@ def timeline_duplicate() -> Dict[str, Any]:
         }
     return {"success": False, "error": "Failed to duplicate timeline"}
 
+
 @mcp.tool()
-def timeline_export(
-    file_path: str, export_type: str, export_subtype: str = "EXPORT_NONE"
-) -> Dict[str, Any]:
+def timeline_export(file_path: str, export_type: str, export_subtype: str = "EXPORT_NONE") -> Dict[str, Any]:
     """Export the current timeline to a file.
 
-        Args:
-        file_path: Output file path.
-        export_type: Export type (e.g. 'EXPORT_AAF', 'EXPORT_EDL', 'EXPORT_FCP_7_XML', 'EXPORT_FCPXML_1_10', 'EXPORT_DRT', 'EXPORT_TEXT_CSV', 'EXPORT_TEXT_TAB', 'EXPORT_OTIO', 'EXPORT_ALE').
-        export_subtype: Export subtype for AAF/EDL. Default: 'EXPORT_NONE'.
+    Args:
+    file_path: Output file path.
+    export_type: Export type (e.g. 'EXPORT_AAF', 'EXPORT_EDL', 'EXPORT_FCP_7_XML', 'EXPORT_FCPXML_1_10', 'EXPORT_DRT', 'EXPORT_TEXT_CSV', 'EXPORT_TEXT_TAB', 'EXPORT_OTIO', 'EXPORT_ALE').
+    export_subtype: Export subtype for AAF/EDL. Default: 'EXPORT_NONE'.
     """
     _, tl, err = _get_timeline()
     if err:
         return err
     # Map string constants to resolve constants
     try:
-        etype = (
-            getattr(resolve, export_type)
-            if hasattr(resolve, export_type)
-            else export_type
-        )
-        esub = (
-            getattr(resolve, export_subtype)
-            if hasattr(resolve, export_subtype)
-            else export_subtype
-        )
+        etype = getattr(resolve, export_type) if hasattr(resolve, export_type) else export_type
+        esub = getattr(resolve, export_subtype) if hasattr(resolve, export_subtype) else export_subtype
     except Exception:
         etype = export_type
         esub = export_subtype
     result = tl.Export(file_path, etype, esub)
     return {"success": bool(result), "file_path": file_path}
 
+
 @mcp.tool()
-def timeline_get_current_clip_thumbnail(
-    width: int = 320, height: int = 180
-) -> Dict[str, Any]:
+def timeline_get_current_clip_thumbnail(width: int = 320, height: int = 180) -> Dict[str, Any]:
     """Get thumbnail image data for the current clip.
 
-        Args:
-        width: Thumbnail width. Default: 320.
-        height: Thumbnail height. Default: 180.
+    Args:
+    width: Thumbnail width. Default: 320.
+    height: Thumbnail height. Default: 180.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1633,6 +1745,7 @@ def timeline_get_current_clip_thumbnail(
         return {"success": True, "has_data": bool(result)}
     return {"success": False}
 
+
 @mcp.tool()
 def timeline_get_current_timecode() -> Dict[str, Any]:
     """Get the current playhead timecode."""
@@ -1640,6 +1753,7 @@ def timeline_get_current_timecode() -> Dict[str, Any]:
     if err:
         return err
     return {"timecode": tl.GetCurrentTimecode()}
+
 
 @mcp.tool()
 def timeline_get_is_track_enabled(track_type: str, track_index: int) -> Dict[str, Any]:
@@ -1656,6 +1770,7 @@ def timeline_get_is_track_enabled(track_type: str, track_index: int) -> Dict[str
     enabled = tl.GetIsTrackEnabled(track_type, track_index)
     return {"enabled": bool(enabled)}
 
+
 @mcp.tool()
 def timeline_get_is_track_locked(track_type: str, track_index: int) -> Dict[str, Any]:
     """Check if a track is locked.
@@ -1671,6 +1786,7 @@ def timeline_get_is_track_locked(track_type: str, track_index: int) -> Dict[str,
     locked = tl.GetIsTrackLocked(track_type, track_index)
     return {"locked": bool(locked)}
 
+
 @mcp.tool()
 def timeline_get_mark_in_out() -> Dict[str, Any]:
     """Get mark in/out points for the current timeline."""
@@ -1680,12 +1796,13 @@ def timeline_get_mark_in_out() -> Dict[str, Any]:
     result = tl.GetMarkInOut()
     return result if result else {}
 
+
 @mcp.tool()
 def timeline_get_marker_by_custom_data(custom_data: str) -> Dict[str, Any]:
     """Find a timeline marker by its custom data.
 
-        Args:
-        custom_data: Custom data string to search for.
+    Args:
+    custom_data: Custom data string to search for.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1693,18 +1810,20 @@ def timeline_get_marker_by_custom_data(custom_data: str) -> Dict[str, Any]:
     marker = tl.GetMarkerByCustomData(custom_data)
     return {"marker": marker if marker else {}}
 
+
 @mcp.tool()
 def timeline_get_marker_custom_data(frame_id: int) -> Dict[str, Any]:
     """Get the custom data of a timeline marker.
 
-        Args:
-        frame_id: Frame number of the marker.
+    Args:
+    frame_id: Frame number of the marker.
     """
     _, tl, err = _get_timeline()
     if err:
         return err
     data = tl.GetMarkerCustomData(frame_id)
     return {"frame_id": frame_id, "custom_data": data if data else ""}
+
 
 @mcp.tool()
 def timeline_get_markers() -> Dict[str, Any]:
@@ -1714,6 +1833,7 @@ def timeline_get_markers() -> Dict[str, Any]:
         return err
     markers = tl.GetMarkers()
     return {"markers": markers if markers else {}}
+
 
 @mcp.tool()
 def timeline_get_media_pool_item() -> Dict[str, Any]:
@@ -1726,6 +1846,7 @@ def timeline_get_media_pool_item() -> Dict[str, Any]:
         return {"name": mpi.GetName(), "unique_id": mpi.GetUniqueId()}
     return {"media_pool_item": None}
 
+
 @mcp.tool()
 def timeline_get_node_graph() -> Dict[str, Any]:
     """Get the node graph for the current timeline."""
@@ -1736,6 +1857,7 @@ def timeline_get_node_graph() -> Dict[str, Any]:
     if graph:
         return {"has_graph": True, "num_nodes": graph.GetNumNodes()}
     return {"has_graph": False}
+
 
 @mcp.tool()
 def timeline_get_track_name(track_type: str, track_index: int) -> Dict[str, Any]:
@@ -1751,6 +1873,7 @@ def timeline_get_track_name(track_type: str, track_index: int) -> Dict[str, Any]
         return err
     name = tl.GetTrackName(track_type, track_index)
     return {"track_name": name if name else ""}
+
 
 @mcp.tool()
 def timeline_get_track_sub_type(track_type: str, track_index: int) -> Dict[str, Any]:
@@ -1771,6 +1894,7 @@ def timeline_get_track_sub_type(track_type: str, track_index: int) -> Dict[str, 
         "sub_type": sub if sub else "",
     }
 
+
 @mcp.tool()
 def timeline_get_unique_id() -> Dict[str, Any]:
     """Get the unique ID of the current timeline."""
@@ -1778,6 +1902,7 @@ def timeline_get_unique_id() -> Dict[str, Any]:
     if err:
         return err
     return {"unique_id": tl.GetUniqueId()}
+
 
 @mcp.tool()
 def timeline_grab_all_stills() -> Dict[str, Any]:
@@ -1788,6 +1913,7 @@ def timeline_grab_all_stills() -> Dict[str, Any]:
     result = tl.GrabAllStills()
     return {"success": result is not None}
 
+
 @mcp.tool()
 def timeline_grab_still() -> Dict[str, Any]:
     """Grab a still from the current frame of the timeline."""
@@ -1797,15 +1923,14 @@ def timeline_grab_still() -> Dict[str, Any]:
     result = tl.GrabStill()
     return {"success": result is not None}
 
+
 @mcp.tool()
-def timeline_import_into(
-    file_path: str, import_options: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def timeline_import_into(file_path: str, import_options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Import content into the current timeline from a file.
 
-        Args:
-        file_path: Path to the file to import (AAF, EDL, XML, etc.).
-        import_options: Optional dict of import options.
+    Args:
+    file_path: Path to the file to import (AAF, EDL, XML, etc.).
+    import_options: Optional dict of import options.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1816,6 +1941,7 @@ def timeline_import_into(
         result = tl.ImportIntoTimeline(file_path)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_insert_fusion_composition() -> Dict[str, Any]:
     """Insert a Fusion composition into the timeline."""
@@ -1825,12 +1951,13 @@ def timeline_insert_fusion_composition() -> Dict[str, Any]:
     result = tl.InsertFusionCompositionIntoTimeline()
     return {"success": result is not None}
 
+
 @mcp.tool()
 def timeline_insert_fusion_generator(generator_name: str) -> Dict[str, Any]:
     """Insert a Fusion generator into the timeline.
 
-        Args:
-        generator_name: Name of the Fusion generator.
+    Args:
+    generator_name: Name of the Fusion generator.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1838,12 +1965,13 @@ def timeline_insert_fusion_generator(generator_name: str) -> Dict[str, Any]:
     result = tl.InsertFusionGeneratorIntoTimeline(generator_name)
     return {"success": result is not None}
 
+
 @mcp.tool()
 def timeline_insert_fusion_title(title_name: str) -> Dict[str, Any]:
     """Insert a Fusion title into the timeline.
 
-        Args:
-        title_name: Name of the Fusion title.
+    Args:
+    title_name: Name of the Fusion title.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1851,15 +1979,14 @@ def timeline_insert_fusion_title(title_name: str) -> Dict[str, Any]:
     result = tl.InsertFusionTitleIntoTimeline(title_name)
     return {"success": result is not None}
 
+
 @mcp.tool()
-def timeline_insert_generator(
-    generator_name: str, duration: Optional[int] = None
-) -> Dict[str, Any]:
+def timeline_insert_generator(generator_name: str, duration: Optional[int] = None) -> Dict[str, Any]:
     """Insert a generator into the timeline.
 
-        Args:
-        generator_name: Name of the generator to insert.
-        duration: Optional duration in frames.
+    Args:
+    generator_name: Name of the generator to insert.
+    duration: Optional duration in frames.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1870,12 +1997,13 @@ def timeline_insert_generator(
         result = tl.InsertGeneratorIntoTimeline(generator_name)
     return {"success": result is not None}
 
+
 @mcp.tool()
 def timeline_insert_ofx_generator(generator_name: str) -> Dict[str, Any]:
     """Insert an OFX generator into the timeline.
 
-        Args:
-        generator_name: Name of the OFX generator.
+    Args:
+    generator_name: Name of the OFX generator.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1883,12 +2011,13 @@ def timeline_insert_ofx_generator(generator_name: str) -> Dict[str, Any]:
     result = tl.InsertOFXGeneratorIntoTimeline(generator_name)
     return {"success": result is not None}
 
+
 @mcp.tool()
 def timeline_insert_title(title_name: str) -> Dict[str, Any]:
     """Insert a title into the timeline.
 
-        Args:
-        title_name: Name of the title to insert.
+    Args:
+    title_name: Name of the title to insert.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1896,10 +2025,9 @@ def timeline_insert_title(title_name: str) -> Dict[str, Any]:
     result = tl.InsertTitleIntoTimeline(title_name)
     return {"success": result is not None}
 
+
 @mcp.tool()
-def timeline_set_clips_linked(
-    clip_ids: List[str], linked: bool, track_type: str = "video", track_index: int = 1
-) -> Dict[str, Any]:
+def timeline_set_clips_linked(clip_ids: List[str], linked: bool, track_type: str = "video", track_index: int = 1) -> Dict[str, Any]:
     """Link or unlink clips in the timeline.
 
         Args:
@@ -1921,12 +2049,13 @@ def timeline_set_clips_linked(
     result = tl.SetClipsLinked(targets, linked)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_set_current_timecode(timecode: str) -> Dict[str, Any]:
     """Set the playhead to a specific timecode.
 
-        Args:
-        timecode: Timecode string (e.g. '01:00:05:00').
+    Args:
+    timecode: Timecode string (e.g. '01:00:05:00').
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1934,13 +2063,14 @@ def timeline_set_current_timecode(timecode: str) -> Dict[str, Any]:
     result = tl.SetCurrentTimecode(timecode)
     return {"success": bool(result), "timecode": timecode}
 
+
 @mcp.tool()
 def timeline_set_mark_in_out(mark_in: int, mark_out: int) -> Dict[str, Any]:
     """Set mark in/out points for the current timeline.
 
-        Args:
-        mark_in: Mark in frame number.
-        mark_out: Mark out frame number.
+    Args:
+    mark_in: Mark in frame number.
+    mark_out: Mark out frame number.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1948,12 +2078,13 @@ def timeline_set_mark_in_out(mark_in: int, mark_out: int) -> Dict[str, Any]:
     result = tl.SetMarkInOut(mark_in, mark_out)
     return {"success": bool(result)}
 
+
 @mcp.tool()
 def timeline_set_name(name: str) -> Dict[str, Any]:
     """Rename the current timeline.
 
-        Args:
-        name: New name for the timeline.
+    Args:
+    name: New name for the timeline.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1961,12 +2092,13 @@ def timeline_set_name(name: str) -> Dict[str, Any]:
     result = tl.SetName(name)
     return {"success": bool(result), "name": name}
 
+
 @mcp.tool()
 def timeline_set_start_timecode(timecode: str) -> Dict[str, Any]:
     """Set the start timecode of the current timeline.
 
-        Args:
-        timecode: Timecode string (e.g. '01:00:00:00').
+    Args:
+    timecode: Timecode string (e.g. '01:00:00:00').
     """
     _, tl, err = _get_timeline()
     if err:
@@ -1974,10 +2106,9 @@ def timeline_set_start_timecode(timecode: str) -> Dict[str, Any]:
     result = tl.SetStartTimecode(timecode)
     return {"success": bool(result), "timecode": timecode}
 
+
 @mcp.tool()
-def timeline_set_track_enable(
-    track_type: str, track_index: int, enabled: bool
-) -> Dict[str, Any]:
+def timeline_set_track_enable(track_type: str, track_index: int, enabled: bool) -> Dict[str, Any]:
     """Enable or disable a track.
 
         Args:
@@ -1992,10 +2123,9 @@ def timeline_set_track_enable(
     result = tl.SetTrackEnable(track_type, track_index, enabled)
     return {"success": bool(result)}
 
+
 @mcp.tool()
-def timeline_set_track_lock(
-    track_type: str, track_index: int, locked: bool
-) -> Dict[str, Any]:
+def timeline_set_track_lock(track_type: str, track_index: int, locked: bool) -> Dict[str, Any]:
     """Lock or unlock a track.
 
         Args:
@@ -2010,10 +2140,9 @@ def timeline_set_track_lock(
     result = tl.SetTrackLock(track_type, track_index, locked)
     return {"success": bool(result)}
 
+
 @mcp.tool()
-def timeline_set_track_name(
-    track_type: str, track_index: int, name: str
-) -> Dict[str, Any]:
+def timeline_set_track_name(track_type: str, track_index: int, name: str) -> Dict[str, Any]:
     """Set the name of a track.
 
         Args:
@@ -2028,15 +2157,14 @@ def timeline_set_track_name(
     result = tl.SetTrackName(track_type, track_index, name)
     return {"success": bool(result)}
 
+
 @mcp.tool()
-def timeline_update_marker_custom_data(
-    frame_id: int, custom_data: str
-) -> Dict[str, Any]:
+def timeline_update_marker_custom_data(frame_id: int, custom_data: str) -> Dict[str, Any]:
     """Update the custom data of a timeline marker.
 
-        Args:
-        frame_id: Frame number of the marker.
-        custom_data: New custom data string.
+    Args:
+    frame_id: Frame number of the marker.
+    custom_data: New custom data string.
     """
     _, tl, err = _get_timeline()
     if err:

@@ -9,9 +9,9 @@ This module provides functions for working with DaVinci Resolve UI layout preset
 - Managing layout configurations
 """
 
-import os
 import logging
-from typing import Dict, List, Any, Optional, Union
+import os
+from typing import Any, Dict, List
 
 # Configure logging
 logger = logging.getLogger("davinci-resolve-mcp.layout_presets")
@@ -54,8 +54,8 @@ def get_layout_preset_path(platform: str = None) -> str:
     Returns:
         Path to the layout presets directory
     """
-    import platform as platform_module
     import os
+    import platform as platform_module
 
     # Determine platform if not specified
     if platform is None:
@@ -210,9 +210,7 @@ def load_layout_preset(resolve_obj, preset_name: str, layout_type: str = "ui") -
         return False
 
 
-def export_layout_preset(
-    preset_name: str, export_path: str, layout_type: str = "ui"
-) -> bool:
+def export_layout_preset(preset_name: str, export_path: str, layout_type: str = "ui") -> bool:
     """
     Export a layout preset to a file.
 
@@ -259,9 +257,7 @@ def export_layout_preset(
         return False
 
 
-def import_layout_preset(
-    import_path: str, preset_name: str = None, layout_type: str = "ui"
-) -> bool:
+def import_layout_preset(import_path: str, preset_name: str = None, layout_type: str = "ui") -> bool:
     """
     Import a layout preset from a file.
 
