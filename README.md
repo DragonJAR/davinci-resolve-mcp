@@ -166,28 +166,29 @@ App-level operations (get version, switch pages, quit). API constants reference 
 
 ## API Coverage
 
-Every non-deprecated method in DaVinci Resolve Scripting API is covered. The default compound server exposes **28 tools** that group related operations by action parameter. The full granular server provides **356 individual tools** for power users.
+Every non-deprecated method in DaVinci Resolve Scripting API is covered. The default compound server exposes **28 tools** that group related operations by action parameter. The full granular server provides **356 individual tools** for power users. The FusionComp class has 83 low-level methods; MCP server exposes the most useful 20+ for node graph operations.
 
 | Class | Methods | Tools | Description |
 |-------|---------|-------|-------------|
-| Resolve | 21 | 21 | App control, pages, layout presets, render/burn-in presets, keyframe mode |
-| ProjectManager | 25 | 25 | Project CRUD, folders, databases, cloud projects, archive/restore |
-| Project | 42 | 42 | Timelines, render pipeline, settings, LUTs, color groups |
-| MediaStorage | 9 | 9 | Volumes, file browsing, media import, mattes |
-| MediaPool | 27 | 27 | Folders, clips, timelines, metadata, stereo, sync |
-| Folder | 8 | 8 | Clip listing, export, transcription |
-| MediaPoolItem | 32 | 32 | Metadata, markers, flags, properties, proxy, transcription |
-| Timeline | 56 | 56 | Tracks, markers, items, export, generators, titles, stills, stereo |
+| Resolve | 24 | 24 | App control, pages, layout presets, render/burn-in presets, keyframe mode |
+| ProjectManager | 29 | 29 | Project CRUD, folders, databases, cloud projects, archive/restore |
+| Project | 47 | 47 | Timelines, render pipeline, settings, LUTs, color groups |
+| MediaStorage | 12 | 12 | Volumes, file browsing, media import, mattes |
+| MediaPool | 28 | 28 | Folders, clips, timelines, metadata, stereo, sync |
+| Folder | 11 | 11 | Clip listing, export, transcription |
+| MediaPoolItem | 38 | 38 | Metadata, markers, flags, properties, proxy, transcription |
+| Timeline | 60 | 60 | Tracks, markers, items, export, generators, titles, stills, stereo |
 | TimelineItem | 76 | 76 | Properties, markers, Fusion comps, versions, takes, CDL, AI tools |
-| Gallery | 8 | 8 | Albums, stills, power grades |
-| GalleryStillAlbum | 6 | 6 | Stills management, import/export, labels |
-| Graph | 11 | 22 | Node operations, LUTs, cache, grades (timeline + clip graph variants) |
-| ColorGroup | 5 | 10 | Group management, pre/post clip node graphs |
-| **Total** | **342** | **356** | |
+| Gallery | 9 | 9 | Albums, stills, power grades |
+| GalleryStillAlbum | 7 | 7 | Stills management, import/export, labels |
+| Graph | 12 | 12 | Node operations, LUTs, cache, grades (timeline + clip graph variants) |
+| ColorGroup | 6 | 6 | Group management, pre/post clip node graphs |
+| FusionComp | 83 | ~20 | Full Fusion composition node graph API (83 low-level methods, most useful 20+ exposed) |
+| **Total** | **442** | **356** | |
 
 ### Test Results
 
-**93.3% methods tested live** — 319 out of 342 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed. Tested against Resolve v20.3.2.9 Studio.
+**72.2% methods tested live** — 319 out of 442 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed. Tested against Resolve v20.3.2.9 Studio.
 
 ## Configuration
 
@@ -276,15 +277,89 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Once connected, control DaVinci Resolve through natural language:
 
+### Project Setup & Organization
+
 ```
-"What version of DaVinci Resolve is running?"
-"List all projects and open the one called 'My Film'"
-"Create a new timeline called 'Assembly Cut' and add all clips from media pool"
-"Add a blue marker at current playhead position with note 'Review this'"
-"Set up a ProRes 422 HQ render for current timeline"
-"Export timeline as an EDL"
-"Switch to Color page and grab a still"
-"Create a Fusion composition on the selected clip"
+"Create a new project called 'Brand_Campaign_2024' in the 'Commercials' folder"
+→ Instead of: Right-click project list > New Project, typing name, drag-and-drop to folder
+
+"Import all files from '/Volumes/SSD/RAW_footage' into the Media Pool"
+→ Instead of: File > Import Media > Navigate to folder > Select all > Open
+
+"Create a timeline from clips 'Interview_Director_A', 'Interview_Director_B', and 'Interview_Cutaways'"
+→ Instead of: Select 3 clips in Media Pool > Right-click > Create New Timeline Using Selected Clips
+
+"Export current project as a DRP archive to backup drive"
+→ Instead of: File > Export Project > Browse path > Name file > Click Save
+```
+
+### Editing & Timeline Operations
+
+```
+"Add 3 video tracks and 2 audio tracks to current timeline"
+→ Instead of: Click track header "+" 5 times, switching between video/audio for each
+
+"Duplicate 'Assembly_v1' timeline as 'Assembly_v2' and lock V1 track"
+→ Instead of: Timeline menu > Duplicate > Rename > Click track lock icon
+
+"Set current timeline start timecode to 01:00:00:00"
+→ Instead of: Right-click timeline ruler > Change Start Timecode > Type in > OK
+
+"Export timeline as AAF for ProTools audio mix"
+→ Instead of: File > Export AAF > Choose version > Browse > Save
+```
+
+### Color Grading
+
+```
+"Create a new color version called 'Teal_Orange_grade' on clip 1 on V2"
+→ Instead of: Clip menu > Add Version > Type name > Click version selector
+
+"Apply 'LogC_to_Rec709' LUT to all clips in 'Interview' color group"
+→ Instead of: Right-click each clip > 3D LUT > Select LUT (repeat for 20+ clips)
+
+"Get node graph structure for current clip's grade"
+→ Instead of: Switch to Color page > Count nodes > Manually track connections in inspector
+```
+
+### Audio
+
+```
+"Set audio volume to -6dB and pan to center left on clip 2 on A2"
+→ Instead of: Switch to Fairlight page > Expand clip > Drag fader to -6dB > Pan knob to L
+
+"List all Fairlight presets available for dialogue tracks"
+→ Instead of: Right-click clip > Audio Preset > Browse through all presets
+```
+
+### VFX & Fusion
+
+```
+"Create a Fusion composition on selected clip with output cache enabled"
+→ Instead of: Right-click clip > Open in Fusion > Toggle cache in settings
+
+"Add Merge node, Tracker, and ColorCorrector to active Fusion composition"
+→ Instead of: Click toolbar 3 times (Merge, Tracker, ColorCorrector) > Drag to connect
+```
+
+### Rendering & Delivery
+
+```
+"Check if any render jobs are in progress before starting new render"
+→ Instead of: Switch to Deliver page > Look at render queue > Scroll through status
+
+"Quick export current timeline using 'YouTube_1080p' preset"
+→ Instead of: Deliver page > Format > Codec > Resolution > Export > Browse > Render
+```
+
+### AI-Powered Tasks
+
+```
+"Generate subtitles from audio track A1 and apply to timeline"
+→ Instead of: Timeline menu > Auto Subtitles > Type settings > Wait for processing > Click Create
+
+"Detect scene cuts on current timeline and add red markers"
+→ Instead of: Timeline menu > Scene Detect > Click Start > Wait > Review cuts manually
 ```
 
 ## Development

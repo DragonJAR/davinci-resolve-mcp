@@ -577,7 +577,7 @@ def print_banner():
     print(bold("  ╠══════════════════════════════════════════════════════╣"))
     print(
         bold(
-            "  ║  28 compound tools · 356 granular · 100% API coverage · 3 platforms       ║"
+            "  ║  28 compound tools · 356 granular · 442 API methods · 3 platforms       ║"
         )
     )
     print(bold("  ╚══════════════════════════════════════════════════════╝"))

@@ -648,9 +648,11 @@ def layout_presets(
       save(name) -> {success}
       load(name) -> {success}
       update(name) -> {success}
-      export(name, path) -> {success}
-      import_preset(path, name?) -> {success}
+      export(name, path) -> {success}  — path: absolute destination path
+      import_preset(path, name?) -> {success}  — path: absolute path to preset file; name: unique preset name
       delete(name) -> {success}
+
+    Note: Export/import paths should be absolute. Preset names must be unique.
     """
     p = params or {}
     r = get_resolve()
@@ -690,10 +692,12 @@ def render_presets(
     """Import/export render and burn-in presets.
 
     Actions:
-      import_render(path) -> {success}
-      export_render(name, path) -> {success}
-      import_burnin(path) -> {success}
-      export_burnin(name, path) -> {success}
+      import_render(path) -> {success}  — path: absolute path to preset file
+      export_render(name, path) -> {success}  — path: absolute destination path
+      import_burnin(path) -> {success}  — path: absolute path to preset file
+      export_burnin(name, path) -> {success}  — path: absolute destination path
+
+    Note: Import/export paths should be absolute file paths. File formats depend on preset type.
     """
     p = params or {}
     r = get_resolve()
@@ -736,7 +740,7 @@ def project_manager(
       delete(name) -> {success}
       import_project(path, name?) -> {success}
       export_project(name, path, with_stills_and_luts?) -> {success}
-      archive(name, path, src_media?, render_cache?, proxy_media?) -> {success}
+      archive(name, path, src_media?, render_cache?, proxy_media?) -> {success}  — defaults: src_media=True, render_cache=True, proxy_media=False
       restore(path, name?) -> {success}
     """
     p = params or {}
@@ -960,7 +964,7 @@ def project_settings(
     Actions:
       get_name() -> {name}
       set_name(name) -> {success}
-      get_setting(name?) -> {settings}  — omit name for all settings
+       get_setting(name?) -> {settings}  — omit name to get ALL settings as a dict; otherwise set individual setting (name must match valid Resolve setting key)
       set_setting(name, value) -> {success}
       get_unique_id() -> {id}
       get_presets() -> {presets}
@@ -1074,14 +1078,14 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
       delete_job(job_id) -> {success}
       delete_all_jobs() -> {success}
       list_jobs() -> {jobs}
-      get_job_status(job_id) -> {status}
+      get_job_status(job_id) -> {status}  — returns job status structure
       start(job_ids?, interactive?) -> {success}
       stop() -> {success}
       is_rendering() -> {rendering}
       get_formats() -> {formats}
       get_codecs(format) -> {codecs}
       get_format_and_codec() -> {format, codec}
-      set_format_and_codec(format, codec) -> {success}
+      set_format_and_codec(format, codec) -> {success}  — format and codec must be obtained from get_formats and get_codecs first
       get_mode() -> {mode}
       set_mode(mode) -> {success}
       get_resolutions(format, codec) -> {resolutions}
@@ -1092,7 +1096,7 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
       save_preset(name) -> {success}
       delete_preset(name) -> {success}
       quick_export_presets() -> {presets}
-      quick_export(preset, params?) -> {status}
+      quick_export(preset, params?) -> {status}  — params: dict of render options
     """
     p = params or {}
     _, proj, err = _check()
@@ -1268,14 +1272,14 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
     Actions:
       get_root_folder() -> {name, id}
       get_current_folder() -> {name, id}
-      set_current_folder(path) -> {success}  — path like "Master/SubFolder"
+      set_current_folder(path) -> {success}  — path format: "Master/SubFolder"
       add_subfolder(name, parent_path?) -> {success, name, id}
       delete_folders(folder_ids) -> {success}
       move_folders(folder_ids, target_path) -> {success}
       refresh() -> {success}
       create_timeline(name) -> {success, name, id}
-      create_timeline_from_clips(name, clip_ids) -> {success, name, id}
-      import_timeline(path, options?) -> {success, name}
+      create_timeline_from_clips(name, clip_ids) -> {success, name, id}  — dual mode: pass clip_ids (list of ID strings) OR clip_infos (list of dicts with filePath, startFrame etc)
+      import_timeline(path, options?) -> {success, name}  — options: dict of import settings
       delete_timelines(timeline_ids) -> {success}
       append_to_timeline(clip_ids) -> {success, count}
       import_media(paths) -> {imported}
@@ -1711,7 +1715,7 @@ def media_pool_item_markers(
     """Markers and flags on media pool clips. Identify clip by clip_id.
 
     Actions:
-      add(clip_id, frame, color, name, note, duration, custom_data?) -> {success}
+      add(clip_id, frame, color, name, note, duration, custom_data?) -> {success}  — duration: marker duration in frames
       get_all(clip_id) -> {markers}
       get_by_custom_data(clip_id, custom_data) -> {markers}
       update_custom_data(clip_id, frame, custom_data) -> {success}
@@ -1722,6 +1726,8 @@ def media_pool_item_markers(
       add_flag(clip_id, color) -> {success}
       get_flags(clip_id) -> {flags}
       clear_flags(clip_id, color) -> {success}
+
+    Marker color values: "Blue", "Cyan", "Green", "Yellow", "Red", "Pink", "Purple", "Fuchsia", "Rose", "Lavender", "SkyBlue", "Mint", "Lemon", "Sand", "Cocoa", "Cream"
     """
     p = params or {}
     _, _, mp, err = _get_mp()
@@ -2260,9 +2266,13 @@ def timeline_item(
     """Properties, transforms, speed, keyframes, and metadata for a timeline item.
     Identify by track_type, track_index, item_index.
 
+    Default: track_type="video", track_index=1, item_index=0
+
     Actions:
       get_name(track_type?, track_index?, item_index?) -> {name}
       get_property(key?, ...) -> {properties}
+        Valid keys: "Pan", "Tilt", "ZoomX", "ZoomY", "RotationAngle", "AnchorPointX", "AnchorPointY", "Pitch", "Yaw", "FlipX", "FlipY", "CropLeft", "CropRight", "CropTop", "CropBottom", "CropSoftness", "CropRetain", "Opacity", "CompositeMode", "Volume", "Pan", "AudioSyncOffset", "Speed", "Reverse", "FreezeFrame", "RetimeProcess", "MotionEstimation", "ResizeMode"
+        Omit key to get all properties.
       set_property(key, value, ...) -> {success}
       get_duration(...) -> {duration}
       get_start(...) -> {start}
@@ -2286,22 +2296,27 @@ def timeline_item(
       get_source_audio_mapping(...) -> {mapping}
       load_burnin_preset(name, ...) -> {success}
       get_retime(...) -> {process, motion_estimation}
-      set_retime(process?, motion_estimation?, ...) -> {success}  — process: nearest, frame_blend, optical_flow (or 0-3); motion_estimation: 0-6
+      set_retime(process?, motion_estimation?, ...) -> {success}
+        process: "nearest" (0), "frame_blend" (2), or "optical_flow" (3)
+        motion_estimation: 0=project default, 1=standard_faster, 2=standard_better, 3=enhanced_faster, 4=enhanced_better, 5=enhanced_best, 6=speed_warp_faster
       get_transform(...) -> {Pan, Tilt, ZoomX, ZoomY, RotationAngle, ...}
       set_transform(Pan?, Tilt?, ZoomX?, ZoomY?, RotationAngle?, AnchorPointX?, AnchorPointY?, Pitch?, Yaw?, FlipX?, FlipY?, ...) -> {success}
       get_crop(...) -> {CropLeft, CropRight, CropTop, CropBottom, CropSoftness, CropRetain}
       set_crop(CropLeft?, CropRight?, CropTop?, CropBottom?, CropSoftness?, CropRetain?, ...) -> {success}
+        All crop values: float 0.0-1.0
+        CropRetain: boolean (maintain aspect ratio)
       get_composite(...) -> {Opacity, CompositeMode}
       set_composite(Opacity?, CompositeMode?, ...) -> {success}
-      get_audio(...) -> {Volume, Pan, AudioSyncOffset, ...}
-      set_audio(Volume?, Pan?, ...) -> {success}
+        Opacity: float 0.0-1.0
+        CompositeMode: "Normal", "Add", "Subtract", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "ColorDodge", "ColorBurn", "LinearDodge", "LinearBurn", "HardLight", "SoftLight", "PinLight", "VividLight", "Difference", "Exclusion", "Hue"
       get_keyframes(property, ...) -> {property, count, keyframes}
       add_keyframe(property, frame, value, ...) -> {success}
       modify_keyframe(property, frame, new_value?, new_frame?, ...) -> {success}
       delete_keyframe(property, frame, ...) -> {success}
       set_keyframe_interpolation(property, frame, interpolation, ...) -> {success}  — Linear, Bezier, EaseIn, EaseOut, EaseInOut
+      set_name(name) -> {success}
 
-    Default: track_type="video", track_index=1, item_index=0
+    Prerequisites: Requires a timeline with items. Use get_track_count and get_items to discover available items.
     """
     p = params or {}
     tl, item, err = _get_item(p)
@@ -2729,6 +2744,7 @@ def timeline_item_markers(
       clear_clip_color(...) -> {success}
 
     Default: track_type="video", track_index=1, item_index=0
+    Marker color values: "Blue", "Cyan", "Green", "Yellow", "Red", "Pink", "Purple", "Fuchsia", "Rose", "Lavender", "SkyBlue", "Mint", "Lemon", "Sand", "Cocoa", "Cream"
     """
     p = params or {}
     _, item, err = _get_item(p)
@@ -2814,8 +2830,8 @@ def timeline_item_fusion(
       get_comp_names(...) -> {names}
       get_comp_by_name(name, ...) -> {available}
       get_comp_by_index(index, ...) -> {available}
-      export_comp(path, index, ...) -> {success}
-      import_comp(path, ...) -> {success}
+      export_comp(path, index, ...) -> {success}  — path: export destination file path
+      import_comp(path, ...) -> {success}  — path: import source file path
       delete_comp(name, ...) -> {success}
       load_comp(name, ...) -> {success}
       rename_comp(old_name, new_name, ...) -> {success}
@@ -2891,8 +2907,8 @@ def timeline_item_color(
     """Color grading, versions, LUTs, cache, and AI tools on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
-      set_cdl(cdl, ...) -> {success}  — cdl: {NodeIndex, Slope, Offset, Power, Saturation}
-      copy_grades(target_ids, ...) -> {success}
+      set_cdl(cdl, ...) -> {success}  — cdl: {NodeIndex: int, Slope: [r,g,b], Offset: [r,g,b], Power: [r,g,b], Saturation: float}
+      copy_grades(target_ids, ...) -> {success}  — target_ids: list of timeline item unique ID strings
       add_version(name, type?, ...) -> {success}  — type: 0=local, 1=remote
       get_current_version(...) -> {version}
       get_version_names(type?, ...) -> {names}
@@ -3028,11 +3044,11 @@ def timeline_item_takes(
     """Take management on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
-      add(clip_id, start_frame?, end_frame?, ...) -> {success}
+      add(clip_id, start_frame?, end_frame?, ...) -> {success}  — clip_id: media pool clip unique ID
       get_count(...) -> {count}
       get_selected_index(...) -> {index}
       get_by_index(index, ...) -> {take}
-      select(index, ...) -> {success}
+      select(index, ...) -> {success}  — index is 1-based
       delete(index, ...) -> {success}
       finalize(...) -> {success}
 
@@ -3100,7 +3116,7 @@ def gallery(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, A
       create_still_album() -> {success}
       create_power_grade_album() -> {success}
 
-    album_index is 0-based into the still albums list.
+    album_index is 0-based. Operations require still albums to exist (may need to create one first).
     """
     p = params or {}
     _, proj, err = _check()
@@ -3479,7 +3495,7 @@ def color_group(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
       list() -> {groups}
       get_name(group_name) -> {name}
       set_name(group_name, new_name) -> {success}
-      get_clips(group_name) -> {clips}
+      get_clips(group_name) -> {clips}  — returns list of clips with name and id for each clip in the color group
       get_pre_clip_graph(group_name) -> {available, num_nodes}
       get_post_clip_graph(group_name) -> {available, num_nodes}
     """
