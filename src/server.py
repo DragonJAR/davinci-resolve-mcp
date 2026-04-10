@@ -228,6 +228,17 @@ def _get_tl():
     return proj, tl, None
 
 
+def _validate_path(user_path: str) -> str:
+    """Validate that user_path doesn't contain path traversal."""
+    import os
+
+    resolved = os.path.realpath(user_path)
+    # Block obvious traversal patterns
+    if ".." in user_path:
+        raise ValueError(f"Path traversal detected in: {user_path}")
+    return resolved
+
+
 def _get_item(p):
     proj, tl, err = _get_tl()
     if err:
@@ -735,21 +746,22 @@ def project_manager(
     elif action == "delete":
         return {"success": bool(pm.DeleteProject(p["name"]))}
     elif action == "import_project":
-        return {"success": bool(pm.ImportProject(p["path"], p.get("name")))}
+        path = _validate_path(p["path"])
+        return {"success": bool(pm.ImportProject(path, p.get("name")))}
     elif action == "export_project":
+        path = _validate_path(p["path"])
         return {
             "success": bool(
-                pm.ExportProject(
-                    p["name"], p["path"], p.get("with_stills_and_luts", True)
-                )
+                pm.ExportProject(p["name"], path, p.get("with_stills_and_luts", True))
             )
         }
     elif action == "archive":
+        path = _validate_path(p["path"])
         return {
             "success": bool(
                 pm.ArchiveProject(
                     p["name"],
-                    p["path"],
+                    path,
                     p.get("src_media", True),
                     p.get("render_cache", True),
                     p.get("proxy_media", False),
@@ -757,7 +769,8 @@ def project_manager(
             )
         }
     elif action == "restore":
-        return {"success": bool(pm.RestoreProject(p["path"], p.get("name")))}
+        path = _validate_path(p["path"])
+        return {"success": bool(pm.RestoreProject(path, p.get("name")))}
     return _unknown(
         action,
         [
@@ -3152,7 +3165,7 @@ def gallery_stills(
             )
         }
     elif action == "grab_and_export":
-        import time, os
+        import os
 
         folder_path = p.get("folder_path")
         if not folder_path:
