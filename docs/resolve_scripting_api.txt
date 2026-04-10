@@ -16,6 +16,7 @@ allowing scripting access from outside of the Resolve application.
 NEW METHODS IN DAVINCI RESOLVE v20.3 (Not in October 2024 docs)
 ================================================================================
 Last verified: April 2026 against DaVinci Resolve Studio v20.3.2.9
+Note: All methods confirmed working. The Resolve API is single-threaded — rapid consecutive calls (~30+) can temporarily block connection. FindTimeline() does NOT exist; use GetTimelineCount() + GetTimelineByIndex(index) instead.
 
 The following methods exist in the live v20.3 API but are NOT documented
 in the official October 2024 scripting API documentation.

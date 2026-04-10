@@ -187,7 +187,7 @@ Every non-deprecated method in DaVinci Resolve Scripting API is covered. The def
 
 ### Test Results
 
-**93.3% methods tested live** — 319 out of 342 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed.
+**93.3% methods tested live** — 319 out of 342 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed. Tested against Resolve v20.3.2.9 Studio.
 
 ## Configuration
 
