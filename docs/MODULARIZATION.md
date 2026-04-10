@@ -1,48 +1,91 @@
-# Modularization Plan
+# Modularization — COMPLETED
 
-## Current State
+## What Was Done
 
-`src/resolve_mcp_server.py` is a ~10,100 line monolith containing 356 tool registrations and their handlers.
+The `resolve_mcp_server.py` monolith (10,081 lines, 356 tools) has been split into focused modules.
 
-## Proposed Structure
+## Actual Structure
 
 ```
 src/
-├── server.py                 # Compound server (28 tools) — unchanged
-├── resolve_mcp_server.py     # Thin entry point — imports and registers all modules
-├── granular/                 # Modular granular server
-│   ├── __init__.py           # Package init, registers all tools
-│   ├── resolve_control.py    # Resolve app tools (~24 methods)
-│   ├── project_manager.py    # ProjectManager tools (~29 methods)
-│   ├── project.py            # Project tools (~47 methods)
-│   ├── media_storage.py      # MediaStorage tools (~12 methods)
-│   ├── media_pool.py         # MediaPool + Folder tools (~39 methods)
-│   ├── media_pool_item.py    # MediaPoolItem tools (~38 methods)
-│   ├── timeline.py           # Timeline tools (~60 methods)
-│   ├── timeline_item.py      # TimelineItem tools (~76 methods) — largest module
-│   ├── gallery.py            # Gallery + GalleryStillAlbum tools (~16 methods)
-│   ├── graph.py              # Graph tools (~12 methods)
-│   ├── color_group.py        # ColorGroup tools (~6 methods)
-│   ├── fusion_comp.py        # FusionComp tools (~83 methods)
-│   └── helpers.py            # Shared helpers, validation, constants
-└── utils/                    # Existing utils — unchanged
+├── server.py                     # Compound server (28 tools) — unchanged
+├── resolve_mcp_server.py         # Thin entry point — imports granular package
+├── granular/                    # Modular granular server
+│   ├── __init__.py               # Creates mcp server, imports all modules
+│   ├── resolve_control.py        # 100 tools — Resolve app-level operations
+│   ├── project.py                # 28 tools — Project management
+│   ├── timeline.py               # 61 tools — Timeline operations
+│   ├── timeline_item.py          # 76 tools — Clip/item operations
+│   ├── media_pool_item.py        # 45 tools — MediaPoolItem operations
+│   ├── media_pool.py             # 17 tools — MediaPool operations
+│   ├── folder.py                 # 12 tools — Folder operations
+│   ├── gallery.py                # 9 tools — Gallery operations
+│   ├── graph.py                  # 7 tools — Node graph operations
+│   └── media_storage.py          # 1 tool — MediaStorage operations
+└── utils/                       # Existing utils — unchanged
 ```
 
-## Migration Steps
+**Total: 356 tools across 10 modules** (vs 14 modules proposed — some categories merged)
 
-1. Extract helpers and shared validation into `granular/helpers.py`
-2. Move each class's tool registrations into its own module
-3. Keep `resolve_mcp_server.py` as thin entry point
-4. Maintain backward compatibility — same 356 tools, same behavior
+## How It Works
 
-## Benefits
+1. `granular/__init__.py` creates the `FastMCP` server instance FIRST
+2. Then imports all module files, which use `@mcp.tool()` to register tools
+3. `resolve_mcp_server.py` is a thin entry point that:
+   - Sets up the Resolve API path
+   - Imports utility functions
+   - Imports `from granular import mcp`
+   - Runs `mcp.run()`
 
-- Each module 300-800 lines (manageable)
-- Easier to test individual components
-- Easier to contribute (focused PRs)
-- Better code organization
+## Splitting Script
 
-## Risks
+`scripts/split_granular.py` — idempotent script that can re-split from backup.
 
-- Breaking existing MCP client configs referencing resolve_mcp_server.py
-- Must preserve exact tool names and behavior
+```bash
+python3 scripts/split_granular.py --dry-run   # preview
+python3 scripts/split_granular.py              # split
+python3 scripts/split_granular.py --restore   # restore from backup
+```
+
+The script:
+- Parses the monolithic file using AST (not regex)
+- Extracts all 356 `@mcp.tool()` functions with their decorators
+- Categorizes tools by most-used API variable (resolve, project, tl, item, etc.)
+- Dedents helper functions for module-level placement
+- Verifies syntax of every module before writing
+
+## Module Sizes
+
+| Module | Tools | Size |
+|--------|-------|------|
+| resolve_control | 100 | 117KB |
+| timeline_item | 76 | 109KB |
+| timeline | 61 | 72KB |
+| media_pool_item | 45 | 72KB |
+| project | 28 | 63KB |
+| media_pool | 17 | 48KB |
+| folder | 12 | 51KB |
+| gallery | 9 | 47KB |
+| graph | 7 | 44KB |
+| media_storage | 1 | 41KB |
+
+## Key Design Decisions
+
+### Helpers in Every Module
+Rather than a central `helpers.py`, each module includes the helpers it needs. This adds some duplication but avoids import complexity and keeps each module self-contained.
+
+### MCP Server in __init__.py
+`granular/__init__.py` creates the `mcp` server instance before importing submodules. This allows each submodule to use `@mcp.tool()` while `mcp` is in scope.
+
+### Categorization Algorithm
+Tools are categorized by which API variable they use most:
+1. Count `resolve.`, `project.`, `tl.`, `item.`, `clip.`, `folder.`, `ms.`, `mp.`, `gallery.`, `graph.`, `cg.`, `fusion.` calls
+2. Map the most-used variable to its API class
+3. Name-based fallback for ambiguous cases
+
+## Backward Compatibility
+
+- All 356 original tool names preserved exactly
+- All tool signatures (parameters, return types) unchanged
+- The thin `resolve_mcp_server.py` can replace the old monolith
+- MCP clients connecting to `resolve_mcp_server.py` work identically
