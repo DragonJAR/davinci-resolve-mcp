@@ -99,9 +99,10 @@ AddMarker, AddTrack, AnalyzeDolbyVision, ClearMarkInOut, ConvertTimelineToStereo
 
 ---
 
-## TimelineItem — 76 methods
+## TimelineItem — 88 methods (live enumerated)
 
-**Note:** These methods are from documentation only. Could not be enumerated in live session because there were no items on the timeline to test against.
+**All methods:**
+AddFlag, AddFusionComp, AddMarker, AddTake, AddVersion, AssignToColorGroup, ClearClipColor, ClearFlags, CopyGrades, CreateMagicMask, DeleteFusionCompByName, DeleteMarkerAtFrame, DeleteMarkerByCustomData, DeleteMarkersByColor, DeleteTakeByIndex, DeleteVersionByName, ExportFusionComp, ExportLUT, FinalizeTake, GetClipColor, GetClipEnabled, GetColorGroup, GetCurrentVersion, GetDuration, GetEnd, GetFlagList, GetFlags, GetFusionCompByIndex, GetFusionCompByName, GetFusionCompCount, GetFusionCompNameList, GetFusionCompNames, GetIsColorOutputCacheEnabled, GetIsFusionOutputCacheEnabled, GetLUT, GetLeftOffset, GetLinkedItems, GetMarkerByCustomData, GetMarkerCustomData, GetMarkers, GetMediaPoolItem, GetName, GetNodeGraph, GetNodeLabel, GetNumNodes, GetProperty, GetRightOffset, GetSelectedTakeIndex, GetSourceAudioChannelMapping, GetSourceEndFrame, GetSourceEndTime, GetSourceStartFrame, GetSourceStartTime, GetStart, GetStereoConvergenceValues, GetStereoLeftFloatingWindowParams, GetStereoRightFloatingWindowParams, GetTakeByIndex, GetTakesCount, GetTrackTypeAndIndex, GetUniqueId, GetVersionNameList, GetVersionNames, GetVoiceIsolationState, ImportFusionComp, LoadBurnInPreset, LoadFusionCompByName, LoadVersionByName, Print, RegenerateMagicMask, RemoveFromColorGroup, RenameFusionCompByName, RenameVersionByName, ResetAllNodeColors, SelectTakeByIndex, SetCDL, SetClipColor, SetClipEnabled, SetColorOutputCache, SetFusionOutputCache, SetLUT, SetName, SetProperty, SetVoiceIsolationState, SmartReframe, Stabilize, UpdateMarkerCustomData, UpdateSidecar
 
 ---
 
@@ -160,7 +161,7 @@ AbortRender, AbortRenderUI, AddMedia, AddSettingAction, AddTool, AddToolAction, 
 
 ## Summary
 
-**Total API Methods: 442** across 14 classes
+**Total API Methods: 454** across 14 classes
 
 ### Method Breakdown by Status:
 
@@ -169,7 +170,7 @@ AbortRender, AbortRenderUI, AddMedia, AddSettingAction, AddTool, AddToolAction, 
 | Documented methods present in live API | 419 |
 | New methods not in documentation | 23 |
 | Deprecated in docs but still live | 12 |
-| **Total** | **442** |
+| **Total** | **454** |
 
 ### New Methods by Class:
 - Resolve: 3 (GetFairlightPresets, Print, SetHighPriority)
@@ -234,7 +235,7 @@ AbortRender, AbortRenderUI, AddMedia, AddSettingAction, AddTool, AddToolAction, 
 
 ## Notes
 
-- TimelineItem methods are from documentation only. Could not be enumerated in live session because there were no items on the timeline.
+- All 12 deprecated methods still work in v20.3.2.9, but should be migrated to their replacements.
 - All 12 deprecated methods still work in v20.3.2.9, but should be migrated to their replacements.
 - The `Print()` method appears to be a debugging utility that prints object contents to the Resolve console.
 - ColorGroup is present in live API with 6 methods ( GetName, GetClipsInTimeline, GetPreClipNodeGraph, GetPostClipNodeGraph, SetName, Print).

@@ -166,9 +166,7 @@ def check_resolve_running():
     """Check if DaVinci Resolve is currently running."""
     try:
         if is_mac():
-            result = subprocess.run(
-                ["pgrep", "-f", "DaVinci Resolve"], capture_output=True, text=True
-            )
+            result = subprocess.run(["pgrep", "-f", "DaVinci Resolve"], capture_output=True, text=True)
             return result.returncode == 0
         elif is_windows():
             result = subprocess.run(
@@ -178,9 +176,7 @@ def check_resolve_running():
             )
             return "Resolve.exe" in result.stdout
         else:  # Linux
-            result = subprocess.run(
-                ["pgrep", "-f", "resolve"], capture_output=True, text=True
-            )
+            result = subprocess.run(["pgrep", "-f", "resolve"], capture_output=True, text=True)
             return result.returncode == 0
     except Exception:
         return False
@@ -206,14 +202,7 @@ def xdg_config():
 def vscode_global_storage():
     """VS Code global storage path per platform."""
     if is_mac():
-        return (
-            home()
-            / "Library"
-            / "Application Support"
-            / "Code"
-            / "User"
-            / "globalStorage"
-        )
+        return home() / "Library" / "Application Support" / "Code" / "User" / "globalStorage"
     elif is_windows():
         return appdata() / "Code" / "User" / "globalStorage"
     else:
@@ -248,11 +237,7 @@ MCP_CLIENTS = [
         "id": "claude-desktop",
         "name": "Claude Desktop",
         "get_path": lambda: {
-            "Darwin": home()
-            / "Library"
-            / "Application Support"
-            / "Claude"
-            / "claude_desktop_config.json",
+            "Darwin": home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json",
             "Windows": appdata() / "Claude" / "claude_desktop_config.json",
             "Linux": xdg_config() / "Claude" / "claude_desktop_config.json",
         }.get(SYSTEM),
@@ -298,24 +283,14 @@ MCP_CLIENTS = [
     {
         "id": "cline",
         "name": "Cline",
-        "get_path": lambda: (
-            vscode_global_storage()
-            / "saoudrizwan.claude-dev"
-            / "settings"
-            / "cline_mcp_settings.json"
-        ),
+        "get_path": lambda: vscode_global_storage() / "saoudrizwan.claude-dev" / "settings" / "cline_mcp_settings.json",
         "config_key": "mcpServers",
         "notes": "AI coding assistant (VS Code extension)",
     },
     {
         "id": "roo-code",
         "name": "Roo Code",
-        "get_path": lambda: (
-            vscode_global_storage()
-            / "rooveterinaryinc.roo-cline"
-            / "settings"
-            / "mcp_settings.json"
-        ),
+        "get_path": lambda: vscode_global_storage() / "rooveterinaryinc.roo-cline" / "settings" / "mcp_settings.json",
         "config_key": "mcpServers",
         "notes": "Autonomous AI coding assistant (VS Code extension)",
     },
@@ -507,9 +482,7 @@ def install_dependencies(venv_path, project_dir):
     print(f"  Installing dependencies...")
 
     # Install MCP SDK
-    subprocess.run(
-        [str(pip), "install", "-q", "mcp[cli]"], check=True, capture_output=True
-    )
+    subprocess.run([str(pip), "install", "-q", "mcp[cli]"], check=True, capture_output=True)
 
     # Install from requirements.txt if it exists
     if req_file.exists():
@@ -575,11 +548,7 @@ def print_banner():
     print(bold("  ╔══════════════════════════════════════════════════════╗"))
     print(bold("  ║     DaVinci Resolve MCP Server — Installer v2.2.0   ║"))
     print(bold("  ╠══════════════════════════════════════════════════════╣"))
-    print(
-        bold(
-            "  ║  28 compound tools · 356 granular · 442 API methods · 3 platforms       ║"
-        )
-    )
+    print(bold("  ║  28 compound tools · 356 granular · 454 API methods · 3 platforms       ║"))
     print(bold("  ╚══════════════════════════════════════════════════════╝"))
     print()
 
@@ -621,9 +590,7 @@ def prompt_clients():
     all_num = str(len(MCP_CLIENTS) + 1).rjust(2)
     manual_num = str(len(MCP_CLIENTS) + 2).rjust(2)
     print(f"\n    {cyan(all_num)}. {bold('All of the above')}")
-    print(
-        f"    {cyan(manual_num)}. {bold('Manual setup')} {dim('(print config, I will set it up myself)')}"
-    )
+    print(f"    {cyan(manual_num)}. {bold('Manual setup')} {dim('(print config, I will set it up myself)')}")
     print(f"    {cyan(' 0')}. {dim('Skip client configuration')}")
 
     print()
@@ -696,9 +663,7 @@ def main():
         default=None,
         help="Path to Python executable to use in MCP configs",
     )
-    parser.add_argument(
-        "--server", type=str, default=None, help="Path to the MCP server script"
-    )
+    parser.add_argument("--server", type=str, default=None, help="Path to the MCP server script")
 
     args = parser.parse_args()
     interactive = args.clients is None
@@ -726,12 +691,8 @@ def main():
     else:
         print(f"  API Path:  {red('Not found')}")
         if is_linux():
-            print(
-                f"  {dim('Tip: DaVinci Resolve typically installs to /opt/resolve/')}"
-            )
-            print(
-                f"  {dim('     Set RESOLVE_SCRIPT_API environment variable if installed elsewhere')}"
-            )
+            print(f"  {dim('Tip: DaVinci Resolve typically installs to /opt/resolve/')}")
+            print(f"  {dim('     Set RESOLVE_SCRIPT_API environment variable if installed elsewhere')}")
 
         # Check environment variable fallback
         env_api = os.environ.get("RESOLVE_SCRIPT_API")
@@ -742,25 +703,17 @@ def main():
     if lib_path:
         print(f"  Library:   {green(lib_path)}")
     else:
-        print(
-            f"  Library:   {yellow('Not found')} {dim('(optional — API path is sufficient)')}"
-        )
+        print(f"  Library:   {yellow('Not found')} {dim('(optional — API path is sufficient)')}")
 
     resolve_running = check_resolve_running()
     if resolve_running:
         print(f"  Resolve:   {green('Running')}")
     else:
-        print(
-            f"  Resolve:   {yellow('Not running')} {dim('(start Resolve to verify connection)')}"
-        )
+        print(f"  Resolve:   {yellow('Not running')} {dim('(start Resolve to verify connection)')}")
 
     if not api_path:
-        print(
-            f"\n  {yellow('Warning:')} Could not auto-detect DaVinci Resolve installation."
-        )
-        print(
-            f"  The installer will continue, but you may need to set RESOLVE_SCRIPT_API manually."
-        )
+        print(f"\n  {yellow('Warning:')} Could not auto-detect DaVinci Resolve installation.")
+        print(f"  The installer will continue, but you may need to set RESOLVE_SCRIPT_API manually.")
         if interactive and not prompt_yes_no("Continue anyway?"):
             print(f"\n  {dim('Aborted.')}")
             sys.exit(1)
@@ -848,9 +801,7 @@ def main():
     if server_path.exists():
         print(f"  Server:    {green(str(server_path))}")
     else:
-        print(
-            f"  Server:    {yellow(str(server_path))} {dim('(file not found — check path)')}"
-        )
+        print(f"  Server:    {yellow(str(server_path))} {dim('(file not found — check path)')}")
 
     # ══════════════════════════════════════════════════════════════════════
     # STEP 4: Configure MCP Clients
@@ -886,9 +837,7 @@ def main():
             skipped.append(client_id)
             continue
 
-        success, message = write_client_config(
-            client, python_path, server_path, api_path, dry_run=args.dry_run
-        )
+        success, message = write_client_config(client, python_path, server_path, api_path, dry_run=args.dry_run)
 
         if success:
             if args.dry_run:
@@ -905,26 +854,18 @@ def main():
 
     # Show manual config
     if show_manual:
-        standard, vscode_fmt, zed_fmt, opencode_fmt = generate_manual_config(
-            python_path, server_path, api_path
-        )
+        standard, vscode_fmt, zed_fmt, opencode_fmt = generate_manual_config(python_path, server_path, api_path)
         print(f"\n  {bold('Manual Configuration')}")
         print(f"  {'─' * 50}")
-        print(
-            f"\n  {cyan('OpenCode format')} (add to ~/.config/opencode/opencode.json):"
-        )
+        print(f"\n  {cyan('OpenCode format')} (add to ~/.config/opencode/opencode.json):")
         print()
         for line in opencode_fmt.split("\n"):
             print(f"    {line}")
-        print(
-            f"\n  {cyan('Standard format')} (Claude Desktop, Cursor, Windsurf, Cline, Roo Code, Continue):"
-        )
+        print(f"\n  {cyan('Standard format')} (Claude Desktop, Cursor, Windsurf, Cline, Roo Code, Continue):")
         print()
         for line in standard.split("\n"):
             print(f"    {line}")
-        print(
-            f"\n  {cyan('VS Code format')} (GitHub Copilot agent mode — save as .vscode/mcp.json):"
-        )
+        print(f"\n  {cyan('VS Code format')} (GitHub Copilot agent mode — save as .vscode/mcp.json):")
         print()
         for line in vscode_fmt.split("\n"):
             print(f"    {line}")
@@ -955,9 +896,7 @@ def main():
         if success:
             if "not running" in message.lower():
                 print(f"  API:       {green('Module loads OK')}")
-                print(
-                    f"  Resolve:   {yellow('Not running')} — start Resolve to use MCP tools"
-                )
+                print(f"  Resolve:   {yellow('Not running')} — start Resolve to use MCP tools")
             else:
                 print(f"  Connected: {green(message)}")
         else:
@@ -990,9 +929,7 @@ def main():
             print(f"  {dim(f'API:    {api_path}')}")
     elif not selected_ids:
         print(f"  {green(bold('Environment ready!'))}")
-        print(
-            f"  Run {cyan('python install.py --clients all')} to configure MCP clients later."
-        )
+        print(f"  Run {cyan('python install.py --clients all')} to configure MCP clients later.")
     else:
         print(f"  {yellow('No clients configured.')}")
         print(f"  Run {cyan('python install.py')} again to retry.")

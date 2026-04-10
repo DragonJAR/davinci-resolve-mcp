@@ -178,17 +178,17 @@ Every non-deprecated method in DaVinci Resolve Scripting API is covered. The def
 | Folder | 11 | 11 | Clip listing, export, transcription |
 | MediaPoolItem | 38 | 38 | Metadata, markers, flags, properties, proxy, transcription |
 | Timeline | 60 | 60 | Tracks, markers, items, export, generators, titles, stills, stereo |
-| TimelineItem | 76 | 76 | Properties, markers, Fusion comps, versions, takes, CDL, AI tools |
+| TimelineItem | 88 | 88 | Properties, markers, Fusion comps, versions, takes, CDL, AI tools |
 | Gallery | 9 | 9 | Albums, stills, power grades |
 | GalleryStillAlbum | 7 | 7 | Stills management, import/export, labels |
 | Graph | 12 | 12 | Node operations, LUTs, cache, grades (timeline + clip graph variants) |
 | ColorGroup | 6 | 6 | Group management, pre/post clip node graphs |
 | FusionComp | 83 | ~20 | Full Fusion composition node graph API (83 low-level methods, most useful 20+ exposed) |
-| **Total** | **442** | **356** | |
+| **Total** | **454** | **356** | |
 
 ### Test Results
 
-**72.2% methods tested live** — 319 out of 442 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed. Tested against Resolve v20.3.2.9 Studio.
+**70.3% methods tested live** — 319 out of 454 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed. Tested against Resolve v20.3.2.9 Studio.
 
 ## Configuration
 
