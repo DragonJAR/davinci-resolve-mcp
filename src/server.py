@@ -984,7 +984,10 @@ def project_settings(
     elif action == "set_name":
         return {"success": bool(proj.SetName(p["name"]))}
     elif action == "get_setting":
-        return {"settings": _ser(proj.GetSetting(p.get("name", "")))}
+        name = p.get("name", "")
+        if not name:
+            return _err("Setting name cannot be empty")
+        return {"settings": _ser(proj.GetSetting(name))}
     elif action == "set_setting":
         return {"success": bool(proj.SetSetting(p["name"], p["value"]))}
     elif action == "get_unique_id":
@@ -999,7 +1002,13 @@ def project_settings(
         g = proj.GetGallery()
         return {"available": g is not None}
     elif action == "export_frame_as_still":
-        return {"success": bool(proj.ExportCurrentFrameAsStill(p["path"]))}
+        path = p.get("path", "")
+        if not path:
+            return _err("Path cannot be empty")
+        parent_dir = os.path.dirname(path)
+        if parent_dir and not os.path.isdir(parent_dir):
+            return _err(f"Directory does not exist: {parent_dir}")
+        return {"success": bool(proj.ExportCurrentFrameAsStill(path))}
     elif action == "load_burnin_preset":
         return {"success": bool(proj.LoadBurnInPreset(p["name"]))}
     elif action == "insert_audio":
@@ -1653,10 +1662,12 @@ def media_pool_item(
     elif action == "get_mark_in_out":
         return _ser(clip.GetMarkInOut())
     elif action == "set_mark_in_out":
+        mark_in = p.get("mark_in", 0)
+        mark_out = p.get("mark_out", 0)
+        if mark_in > mark_out:
+            return _err(f"mark_in ({mark_in}) must be <= mark_out ({mark_out})")
         return {
-            "success": bool(
-                clip.SetMarkInOut(p["mark_in"], p["mark_out"], p.get("type", "all"))
-            )
+            "success": bool(clip.SetMarkInOut(mark_in, mark_out, p.get("type", "all")))
         }
     elif action == "clear_mark_in_out":
         return {"success": bool(clip.ClearMarkInOut(p.get("type", "all")))}
@@ -2018,10 +2029,12 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
     elif action == "get_mark_in_out":
         return _ser(tl.GetMarkInOut())
     elif action == "set_mark_in_out":
+        mark_in = p.get("mark_in", 0)
+        mark_out = p.get("mark_out", 0)
+        if mark_in > mark_out:
+            return _err(f"mark_in ({mark_in}) must be <= mark_out ({mark_out})")
         return {
-            "success": bool(
-                tl.SetMarkInOut(p["mark_in"], p["mark_out"], p.get("type", "all"))
-            )
+            "success": bool(tl.SetMarkInOut(mark_in, mark_out, p.get("type", "all")))
         }
     elif action == "clear_mark_in_out":
         return {"success": bool(tl.ClearMarkInOut(p.get("type", "all")))}
