@@ -246,6 +246,51 @@ def get_current_project():
 # ------------------
 
 
+@mcp.tool()
+def get_fairlight_presets() -> Dict[str, Any]:
+    """Get Fairlight audio presets from DaVinci Resolve."""
+    resolve = get_resolve()
+    if resolve is None:
+        return {"error": "Not connected to DaVinci Resolve"}
+
+    try:
+        presets = resolve.GetFairlightPresets()
+        return {"presets": _serialize_value(presets)}
+    except Exception as e:
+        return {"error": f"Failed to get Fairlight presets: {str(e)}"}
+
+
+@mcp.tool()
+def set_high_priority() -> str:
+    """Set the application to high priority mode."""
+    resolve = get_resolve()
+    if resolve is None:
+        return "Error: Not connected to DaVinci Resolve"
+
+    try:
+        result = resolve.SetHighPriority()
+        if result:
+            return "Successfully set high priority mode"
+        else:
+            return "Failed to set high priority mode"
+    except Exception as e:
+        return f"Error setting high priority: {str(e)}"
+
+
+def _serialize_value(value):
+    """Helper to serialize Resolve API objects to JSON-safe values."""
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {k: _serialize_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_serialize_value(v) for v in value]
+    # Resolve API object — return string representation
+    return str(value)
+
+
 @mcp.resource("resolve://version")
 def get_resolve_version() -> str:
     """Get DaVinci Resolve version information."""
@@ -753,13 +798,111 @@ def set_current_timeline(name: str) -> str:
 
 
 @mcp.tool()
+def get_voice_isolation_state(track_index: int = 1) -> Dict[str, Any]:
+    """Get voice isolation state for a specific track.
+
+    Args:
+        track_index: The index of the track to get voice isolation state for (1-based index, defaults to 1)
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return {"error": "No project currently open"}
+
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        return {"error": "No timeline currently active"}
+
+    try:
+        state = current_timeline.GetVoiceIsolationState(track_index)
+        return _serialize_value(state)
+    except Exception as e:
+        return {"error": f"Failed to get voice isolation state: {str(e)}"}
+
+
+@mcp.tool()
+def set_voice_isolation_state(track_index: int = 1, state: str = None) -> str:
+    """Set voice isolation state for a specific track.
+
+    Args:
+        track_index: The index of the track to set voice isolation state for (1-based index, defaults to 1)
+        state: The voice isolation state to set
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return "Error: No project currently open"
+
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        return "Error: No timeline currently active"
+
+    try:
+        result = current_timeline.SetVoiceIsolationState(track_index, state)
+        if result:
+            return f"Successfully set voice isolation state to '{state}' for track {track_index}"
+        else:
+            return f"Failed to set voice isolation state for track {track_index}"
+    except Exception as e:
+        return f"Error setting voice isolation state: {str(e)}"
+
+
+@mcp.tool()
+def get_items_in_track(
+    track_type: str = "video", track_index: int = 1
+) -> Dict[str, Any]:
+    """Get all items in a specific track.
+
+    Args:
+        track_type: The type of track ('video', 'audio', 'subtitle')
+        track_index: The index of the track (1-based index, defaults to 1)
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return {"error": "No project currently open"}
+
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        return {"error": "No timeline currently active"}
+
+    try:
+        items = current_timeline.GetItemsInTrack(track_type, track_index)
+        return {"items": _serialize_value(items)}
+    except Exception as e:
+        return {"error": f"Failed to get items in track: {str(e)}"}
+
+
+@mcp.tool()
+def get_item_list_in_track(
+    track_type: str = "video", track_index: int = 1
+) -> Dict[str, Any]:
+    """Get item list in a specific track.
+
+    Args:
+        track_type: The type of track ('video', 'audio', 'subtitle')
+        track_index: The index of the track (1-based index, defaults to 1)
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return {"error": "No project currently open"}
+
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        return {"error": "No timeline currently active"}
+
+    try:
+        items = current_timeline.GetItemListInTrack(track_type, track_index)
+        return {"items": _serialize_value(items)}
+    except Exception as e:
+        return {"error": f"Failed to get item list in track: {str(e)}"}
+
+
+@mcp.tool()
 def add_marker(frame: int = None, color: str = "Blue", note: str = "") -> str:
     """Add a marker at the specified frame in the current timeline.
 
     Args:
-        frame: The frame number to add the marker at (defaults to current position if None)
+        frame: The frame number to add marker at (defaults to current position if None)
         color: The marker color (Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream)
-        note: Text note to add to the marker
+        note: Text note to add to marker
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
 
@@ -1014,6 +1157,123 @@ def add_clip_to_timeline(clip_name: str, timeline_name: str = None) -> str:
         timeline_name: Optional timeline to target (uses current if not specified)
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
+
+
+# ------------------
+# Media Pool Item Operations
+# ------------------
+
+
+@mcp.tool()
+def set_media_pool_item_name(clip_id: str, name: str) -> str:
+    """Set the name of a media pool clip.
+
+    Args:
+        clip_id: The unique ID of the clip to rename
+        name: The new name for the clip
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return "Error: No project currently open"
+
+    media_pool = current_project.GetMediaPool()
+    if not media_pool:
+        return "Error: Failed to get Media Pool"
+
+    # Find clip by ID
+    root_folder = media_pool.GetRootFolder()
+    clip = _find_clip_by_id(root_folder, clip_id)
+    if not clip:
+        return f"Error: Clip with ID '{clip_id}' not found"
+
+    try:
+        result = clip.SetName(name)
+        if result:
+            return f"Successfully renamed clip to '{name}'"
+        else:
+            return f"Failed to rename clip"
+    except Exception as e:
+        return f"Error renaming clip: {str(e)}"
+
+
+@mcp.tool()
+def link_full_resolution_media(clip_id: str) -> str:
+    """Link full resolution media to a media pool clip.
+
+    Args:
+        clip_id: The unique ID of the clip to link full resolution media to
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return "Error: No project currently open"
+
+    media_pool = current_project.GetMediaPool()
+    if not media_pool:
+        return "Error: Failed to get Media Pool"
+
+    # Find clip by ID
+    root_folder = media_pool.GetRootFolder()
+    clip = _find_clip_by_id(root_folder, clip_id)
+    if not clip:
+        return f"Error: Clip with ID '{clip_id}' not found"
+
+    try:
+        result = clip.LinkFullResolutionMedia()
+        if result:
+            return f"Successfully linked full resolution media to clip '{clip_id}'"
+        else:
+            return f"Failed to link full resolution media"
+    except Exception as e:
+        return f"Error linking full resolution media: {str(e)}"
+
+
+@mcp.tool()
+def monitor_growing_file(clip_id: str) -> str:
+    """Monitor a growing file for a media pool clip.
+
+    Args:
+        clip_id: The unique ID of the clip to monitor
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return "Error: No project currently open"
+
+    media_pool = current_project.GetMediaPool()
+    if not media_pool:
+        return "Error: Failed to get Media Pool"
+
+    # Find clip by ID
+    root_folder = media_pool.GetRootFolder()
+    clip = _find_clip_by_id(root_folder, clip_id)
+    if not clip:
+        return f"Error: Clip with ID '{clip_id}' not found"
+
+    try:
+        result = clip.MonitorGrowingFile()
+        if result:
+            return f"Successfully started monitoring growing file for clip '{clip_id}'"
+        else:
+            return f"Failed to start monitoring growing file"
+    except Exception as e:
+        return f"Error monitoring growing file: {str(e)}"
+
+
+def _find_clip_by_id(folder, clip_id):
+    """Helper to find a clip by its unique ID in a folder and subfolders."""
+    # Search in current folder
+    clips = folder.GetClipList()
+    for clip in clips:
+        if clip.GetUniqueId() == clip_id:
+            return clip
+
+    # Search in subfolders recursively
+    subfolders = folder.GetSubFolderList()
+    for subfolder in subfolders:
+        found = _find_clip_by_id(subfolder, clip_id)
+        if found:
+            return found
+
+    return None
 
 
 # ------------------
@@ -1693,6 +1953,31 @@ def set_cache_path(path_type: str, path: str) -> str:
             return f"Failed to set {path_type} cache path to '{path}'"
     except Exception as e:
         return f"Error setting cache path: {str(e)}"
+
+
+@mcp.tool()
+def apply_fairlight_preset(preset_name: str) -> str:
+    """Apply a Fairlight audio preset to the current timeline.
+
+    Args:
+        preset_name: The name of the Fairlight preset to apply
+    """
+    pm, current_project = get_current_project()
+    if not current_project:
+        return "Error: No project currently open"
+
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        return "Error: No timeline currently active"
+
+    try:
+        result = current_project.ApplyFairlightPresetToCurrentTimeline(preset_name)
+        if result:
+            return f"Successfully applied Fairlight preset '{preset_name}'"
+        else:
+            return f"Failed to apply Fairlight preset '{preset_name}'"
+    except Exception as e:
+        return f"Error applying Fairlight preset: {str(e)}"
 
 
 @mcp.tool()

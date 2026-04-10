@@ -404,6 +404,17 @@ def resolve_constants(
     p = params or {}
 
     all_constants = {
+        # v2.2.0 additions: Voice Isolation (new v20.3)
+        "voice_isolation_properties": [
+            "isEnabled",
+            "amount",
+        ],
+        # v2.2.0 additions: Track Types (enhanced)
+        "track_types": [
+            "video",
+            "audio",
+            "subtitle",
+        ],
         "composite_modes": [
             "Normal",
             "Add",
@@ -433,7 +444,6 @@ def resolve_constants(
         "retime_processes": [
             "Nearest",
             "FrameBlend",
-            "FrameBlend Optical Flow",
             "Optical Flow",
         ],
         "motion_estimation_modes": [
@@ -566,6 +576,9 @@ def resolve_constants(
             "MotionEstimation",
             "Scaling",
             "ResizeFilter",
+            # v2.2.0 additions: Voice Isolation properties (new v20.3)
+            "VoiceIsolationEnabled",
+            "VoiceIsolationAmount",
         ],
         "color_group_return_types": [
             "PreColorGroup",
