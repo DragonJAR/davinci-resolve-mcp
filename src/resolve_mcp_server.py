@@ -315,6 +315,7 @@ def switch_page(page: str) -> str:
 
     Args:
         page: The page to switch to. Options: 'media', 'cut', 'edit', 'fusion', 'color', 'fairlight', 'deliver'
+        Valid: "edit", "cut", "color", "fusion", "fairlight", "deliver"
     """
     resolve = get_resolve()
     if resolve is None:
@@ -853,7 +854,8 @@ def get_items_in_track(
 
     Args:
         track_type: The type of track ('video', 'audio', 'subtitle')
-        track_index: The index of the track (1-based index, defaults to 1)
+        Valid: "video", "audio", "subtitle"
+    track_index: The index of the track (1-based index, defaults to 1)
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -878,7 +880,8 @@ def get_item_list_in_track(
 
     Args:
         track_type: The type of track ('video', 'audio', 'subtitle')
-        track_index: The index of the track (1-based index, defaults to 1)
+        Valid: "video", "audio", "subtitle"
+    track_index: The index of the track (1-based index, defaults to 1)
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -901,8 +904,9 @@ def add_marker(frame: int = None, color: str = "Blue", note: str = "") -> str:
 
     Args:
         frame: The frame number to add marker at (defaults to current position if None)
-        color: The marker color (Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream)
-        note: Text note to add to marker
+    color: The marker color (Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream)
+        Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
+    note: Text note to add to marker
     """
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
 
@@ -2624,8 +2628,9 @@ def set_timeline_item_retime(
 
     Args:
         timeline_item_id: The ID of the timeline item to modify
-        speed: Optional speed factor (e.g., 0.5 for 50%, 2.0 for 200%)
-        process: Optional retime process. Options: 'NearestFrame', 'FrameBlend', 'OpticalFlow'
+    speed: Optional speed factor (e.g., 0.5 for 50%, 2.0 for 200%)
+    process: Optional retime process. Options: 'NearestFrame', 'FrameBlend', 'OpticalFlow'
+        Valid: "nearest" (0), "frame_blend" (2), "optical_flow" (3)
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -3373,7 +3378,8 @@ def enable_keyframes(timeline_item_id: str, keyframe_mode: str = "All") -> str:
 
     Args:
         timeline_item_id: The ID of the timeline item
-        keyframe_mode: Keyframe mode to enable. Options: 'All', 'Color', 'Sizing'
+    keyframe_mode: Keyframe mode to enable. Options: 'All', 'Color', 'Sizing'
+        Valid: 0=Linear, 1=Bezier, 2=Constant
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -4976,9 +4982,10 @@ def add_timeline_mattes_to_media_pool(
 
     Args:
         timeline_item_index: 0-based index of the item in the track.
-        matte_paths: List of absolute file paths for the matte files.
-        track_type: Track type ('video' or 'audio'). Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    matte_paths: List of absolute file paths for the matte files.
+    track_type: Track type ('video' or 'audio'). Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     resolve = get_resolve()
     if resolve is None:
@@ -6262,8 +6269,9 @@ def get_timeline_matte_list(
 
     Args:
         item_index: 0-based index of the item in the track. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     project, mp, err = _get_mp()
     if err:
@@ -6652,12 +6660,13 @@ def add_clip_marker(
 
     Args:
         clip_id: Unique ID of the clip.
-        frame_id: Frame number for the marker.
-        color: Marker color (Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream).
-        name: Marker name.
-        note: Marker note. Default: empty.
-        duration: Marker duration in frames. Default: 1.
-        custom_data: Custom data string. Default: empty.
+    frame_id: Frame number for the marker.
+    color: Marker color (Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream).
+        Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
+    name: Marker name.
+    note: Marker note. Default: empty.
+    duration: Marker duration in frames. Default: 1.
+    custom_data: Custom data string. Default: empty.
     """
     _, mp, err = _get_mp()
     if err:
@@ -6749,7 +6758,8 @@ def delete_clip_markers_by_color(clip_id: str, color: str) -> Dict[str, Any]:
 
     Args:
         clip_id: Unique ID of the clip.
-        color: Color of markers to delete. Use '' to delete all.
+    color: Color of markers to delete. Use '' to delete all.
+        Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
     """
     _, mp, err = _get_mp()
     if err:
@@ -7395,9 +7405,10 @@ def export_stills_from_album(
 
     Args:
         album_index: 0-based album index.
-        folder_path: Directory to export to.
-        file_prefix: Filename prefix. Default: 'still'.
-        format: File format (dpx, cin, tif, jpg, png, ppm, bmp, xpm, drx). Default: 'dpx'.
+    folder_path: Directory to export to.
+    file_prefix: Filename prefix. Default: 'still'.
+    format: File format (dpx, cin, tif, jpg, png, ppm, bmp, xpm, drx). Default: 'dpx'.
+        Valid: "dpx", "cin", "tif", "jpg", "png", "ppm", "bmp", "xpm", "drx"
     """
     resolve = get_resolve()
     if resolve is None:
@@ -7457,8 +7468,9 @@ def graph_get_num_nodes(
 
     Args:
         item_index: 0-based item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7481,10 +7493,11 @@ def graph_set_lut(
 
     Args:
         node_index: 1-based node index.
-        lut_path: Absolute or relative LUT path.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    lut_path: Absolute or relative LUT path.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7507,9 +7520,10 @@ def graph_get_lut(
 
     Args:
         node_index: 1-based node index.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7533,10 +7547,11 @@ def graph_set_node_cache_mode(
 
     Args:
         node_index: 1-based node index.
-        cache_value: -1=Auto, 0=Disabled, 1=Enabled.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    cache_value: -1=Auto, 0=Disabled, 1=Enabled.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7559,9 +7574,10 @@ def graph_get_node_cache_mode(
 
     Args:
         node_index: 1-based node index.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7589,9 +7605,10 @@ def graph_get_node_label(
 
     Args:
         node_index: 1-based node index.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7614,9 +7631,10 @@ def graph_get_tools_in_node(
 
     Args:
         node_index: 1-based node index.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7640,10 +7658,11 @@ def graph_set_node_enabled(
 
     Args:
         node_index: 1-based node index.
-        is_enabled: True to enable, False to disable.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    is_enabled: True to enable, False to disable.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7667,10 +7686,11 @@ def graph_apply_grade_from_drx(
 
     Args:
         drx_path: Absolute path to the .drx file.
-        grade_mode: 0=No keyframes, 1=Source Timecode aligned, 2=Start Frames aligned.
-        item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    grade_mode: 0=No keyframes, 1=Source Timecode aligned, 2=Start Frames aligned.
+    item_index: 0-based timeline item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7690,8 +7710,9 @@ def graph_apply_arri_cdl_lut(
 
     Args:
         item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7711,8 +7732,9 @@ def graph_reset_all_grades(
 
     Args:
         item_index: 0-based timeline item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -7885,8 +7907,9 @@ def timeline_add_track(
 
     Args:
         track_type: 'video', 'audio', or 'subtitle'.
-        sub_track_type: For audio: 'mono', 'stereo', '5.1', '7.1', 'adaptive'. Default: ''.
-        new_track_options: Optional dict of track creation options.
+        Valid: "video", "audio", "subtitle"
+    sub_track_type: For audio: 'mono', 'stereo', '5.1', '7.1', 'adaptive'. Default: ''.
+    new_track_options: Optional dict of track creation options.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -7905,7 +7928,8 @@ def timeline_delete_track(track_type: str, track_index: int) -> Dict[str, Any]:
 
     Args:
         track_type: 'video', 'audio', or 'subtitle'.
-        track_index: 1-based track index to delete.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index to delete.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -7920,7 +7944,8 @@ def timeline_get_track_sub_type(track_type: str, track_index: int) -> Dict[str, 
 
     Args:
         track_type: 'video' or 'audio'.
-        track_index: 1-based track index.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -7941,8 +7966,9 @@ def timeline_set_track_enable(
 
     Args:
         track_type: 'video' or 'audio'.
-        track_index: 1-based track index.
-        enabled: True to enable, False to disable.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index.
+    enabled: True to enable, False to disable.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -7957,7 +7983,8 @@ def timeline_get_is_track_enabled(track_type: str, track_index: int) -> Dict[str
 
     Args:
         track_type: 'video' or 'audio'.
-        track_index: 1-based track index.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -7974,8 +8001,9 @@ def timeline_set_track_lock(
 
     Args:
         track_type: 'video' or 'audio'.
-        track_index: 1-based track index.
-        locked: True to lock, False to unlock.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index.
+    locked: True to lock, False to unlock.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -7990,7 +8018,8 @@ def timeline_get_is_track_locked(track_type: str, track_index: int) -> Dict[str,
 
     Args:
         track_type: 'video' or 'audio'.
-        track_index: 1-based track index.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8007,8 +8036,9 @@ def timeline_delete_clips(
 
     Args:
         clip_ids: List of clip unique IDs to delete.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8031,9 +8061,10 @@ def timeline_set_clips_linked(
 
     Args:
         clip_ids: List of clip unique IDs.
-        linked: True to link, False to unlink.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    linked: True to link, False to unlink.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8061,11 +8092,12 @@ def timeline_add_marker(
 
     Args:
         frame_id: Frame number for the marker.
-        color: Marker color (Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream).
-        name: Marker name.
-        note: Marker note. Default: empty.
-        duration: Duration in frames. Default: 1.
-        custom_data: Custom data string. Default: empty.
+    color: Marker color (Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream).
+        Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
+    name: Marker name.
+    note: Marker note. Default: empty.
+    duration: Duration in frames. Default: 1.
+    custom_data: Custom data string. Default: empty.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8135,6 +8167,7 @@ def timeline_delete_markers_by_color(color: str) -> Dict[str, Any]:
 
     Args:
         color: Color of markers to delete. Use '' to delete all.
+        Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8177,7 +8210,8 @@ def timeline_get_track_name(track_type: str, track_index: int) -> Dict[str, Any]
 
     Args:
         track_type: 'video' or 'audio'.
-        track_index: 1-based track index.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8194,8 +8228,9 @@ def timeline_set_track_name(
 
     Args:
         track_type: 'video' or 'audio'.
-        track_index: 1-based track index.
-        name: New track name.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index.
+    name: New track name.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8228,8 +8263,9 @@ def timeline_create_compound_clip(
 
     Args:
         clip_ids: List of timeline item unique IDs.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8252,8 +8288,9 @@ def timeline_create_fusion_clip(
 
     Args:
         clip_ids: List of timeline item unique IDs.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -8592,8 +8629,9 @@ def ti_get_info(
 
     Args:
         item_index: 0-based item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -8620,8 +8658,9 @@ def ti_get_source_start_time(
 
     Args:
         item_index: 0-based item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -8644,10 +8683,11 @@ def ti_set_property(
 
     Args:
         property_name: Property name (Pan, Tilt, ZoomX, ZoomY, RotationAngle, Opacity, CropLeft, CropRight, CropTop, CropBottom, etc.).
-        property_value: Value to set.
-        item_index: 0-based item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    property_value: Value to set.
+    item_index: 0-based item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -8667,9 +8707,10 @@ def ti_get_property(
 
     Args:
         property_name: Property name, or empty for all. Default: ''.
-        item_index: 0-based item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    item_index: 0-based item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -8694,14 +8735,15 @@ def ti_add_marker(
 
     Args:
         frame_id: Frame offset within the item.
-        color: Marker color.
-        name: Marker name.
-        note: Marker note. Default: ''.
-        duration: Duration in frames. Default: 1.
-        custom_data: Custom data. Default: ''.
-        item_index: 0-based item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    color: Marker color.
+    name: Marker name.
+    note: Marker note. Default: ''.
+    duration: Duration in frames. Default: 1.
+    custom_data: Custom data. Default: ''.
+    item_index: 0-based item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -8718,8 +8760,9 @@ def ti_get_markers(
 
     Args:
         item_index: 0-based item index. Default: 0.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -8735,7 +8778,8 @@ def ti_delete_markers_by_color(
 
     Args:
         color: Color to delete. '' for all.
-        item_index: 0-based item index. Default: 0.
+        Valid: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, SkyBlue, Mint, Lemon, Sand, Cocoa, Cream
+    item_index: 0-based item index. Default: 0.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -9309,9 +9353,10 @@ def ti_copy_grades(
 
     Args:
         target_item_indices: List of 0-based indices of target items.
-        track_type: 'video' or 'audio'. Default: 'video'.
-        track_index: 1-based track index. Default: 1.
-        source_item_index: 0-based source item index. Default: 0.
+    track_type: 'video' or 'audio'. Default: 'video'.
+        Valid: "video", "audio", "subtitle"
+    track_index: 1-based track index. Default: 1.
+    source_item_index: 0-based source item index. Default: 0.
     """
     _, tl, err = _get_timeline()
     if err:
@@ -9390,7 +9435,8 @@ def ti_create_magic_mask(
 
     Args:
         mode: 'Forward' or 'Backward'. Default: 'Forward'.
-        item_index: 0-based item index. Default: 0.
+        Valid: "F" forward, "B" backward, "BI" bidirectional
+    item_index: 0-based item index. Default: 0.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
@@ -9840,9 +9886,10 @@ def get_fusion_comp_by_name(
 
     Args:
         comp_name: Name of the Fusion composition to retrieve.
-        track_type: Track type ('video', 'audio', 'subtitle').
-        track_index: Track index (1-based).
-        item_index: Item index on the track (0-based).
+    track_type: Track type ('video', 'audio', 'subtitle').
+        Valid: "video", "audio", "subtitle"
+    track_index: Track index (1-based).
+    item_index: Item index on the track (0-based).
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
     if err:
