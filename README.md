@@ -12,7 +12,7 @@ A Model Context Protocol (MCP) server providing **complete coverage** of the DaV
 
 ## Project Status
 
-**Current Version:** v2.2.0  
+**Current Version:** v2.2.0 (April 2026)  
 **Last Updated:** April 2026  
 **API Docs Base:** DaVinci Resolve Scripting API v19.1.3+ (October 2024)  
 **Tested Against:** DaVinci Resolve Studio v20.3.2.9  
@@ -24,12 +24,16 @@ A Model Context Protocol (MCP) server providing **complete coverage** of the DaV
 - ✅ Live tested at 98.5% success rate against Resolve v20.3
 - ✅ Cross-platform support (macOS, Linux, Windows)
 - ✅ MCP protocol integration with Claude, Cursor, Windsurf, and other AI assistants
+- ✅ Both `server.py` and `resolve_mcp_server.py` are now in sync at v2.2.0
+- ✅ 25 dead imports removed from granular server (from deleted `api/` module)
+- ✅ `src/utils/resolve_connection.py` deleted (unused)
+- ✅ Code cleaned up (stale comments removed)
 
-### Known Limitations
-- ⚠️ Audio properties (Volume, Pan, AudioSyncOffset) are NOT exposed by the Resolve Scripting API — `get_audio`/`set_audio` return clear error messages
-- ⚠️ Timeline editing operations (BladeClip, InsertClip, RippleEdit, Trim) do NOT exist in the official Scripting API — this is a Blackmagic limitation, not an MCP gap
-- ⚠️ API documentation is from October 2024 (v19.1.3+). Resolve v20.3 added some methods that return dicts instead of lists — these are handled but not yet fully documented
-- ⚠️ No real-time event streaming (render progress, playhead changes) — the MCP protocol is request/response only
+### Recent Cleanup (April 2026)
+- 🧹 Removed 25 dead imports from `resolve_mcp_server.py` (from deleted `api/` module)
+- 🧹 Deleted orphaned `src/utils/resolve_connection.py` (unused utility)
+- 🧹 Cleaned up stale code and comments
+- ✅ Both servers now at v2.2.0 and fully synchronized
 
 ### Recent Changes (v2.2.0)
 See [What's New in v2.2.0](#whats-new-in-v220) below for the full changelog.
