@@ -35,7 +35,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run tests
         run: python -m pytest tests/ -v --tb=short
-        continue-on-error: true  # Tests need DaVinci Resolve which isn't available in CI
+        continue-on-error: true
 
   import-check:
     runs-on: ubuntu-latest
@@ -47,8 +47,11 @@ jobs:
       - name: Install dependencies
         run: pip install mcp[cli]
       - name: Check server.py imports
-        run: python -c "import ast; ast.parse(open('src/server.py').read()); print('server.py: syntax OK')"
+        run: |
+          python -c "import ast; ast.parse(open('src/server.py').read()); print('server.py: syntax OK')"
       - name: Check resolve_mcp_server.py imports
-        run: python -c "import ast; ast.parse(open('src/resolve_mcp_server.py').read()); print('resolve_mcp_server.py: syntax OK')"
+        run: |
+          python -c "import ast; ast.parse(open('src/resolve_mcp_server.py').read()); print('resolve_mcp_server.py: syntax OK')"
       - name: Check install.py imports
-        run: python -c "import ast; ast.parse(open('install.py').read()); print('install.py: syntax OK')"
+        run: |
+          python -c "import ast; ast.parse(open('install.py').read()); print('install.py: syntax OK')"
