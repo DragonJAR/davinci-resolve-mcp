@@ -1,6 +1,6 @@
 # DaVinci Resolve MCP Server
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/samuelgursky/davinci-resolve-mcp/releases)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/DragonJAR/davinci-resolve-mcp/releases)
 [![API Coverage](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#api-coverage)
 [![Tools](https://img.shields.io/badge/MCP%20Tools-28%20(356%20full)-blue.svg)](#server-modes)
 [![Tested](https://img.shields.io/badge/Live%20Tested-93.3%25-green.svg)](#api-coverage)
@@ -13,7 +13,7 @@ A Model Context Protocol (MCP) server providing **complete coverage** of DaVinci
 
 ```bash
 # Clone the repository
-git clone https://github.com/samuelgursky/davinci-resolve-mcp.git
+git clone https://github.com/DragonJAR/davinci-resolve-mcp.git
 cd davinci-resolve-mcp
 
 # Run the installer (requires Resolve to be running)
@@ -35,7 +35,7 @@ The universal installer auto-detects your platform, finds your DaVinci Resolve i
 ```bash
 python install.py                              # Interactive mode
 python install.py --clients all                # Configure all clients
-python install.py --clients cursor,claude-desktop  # Specific clients
+python install.py --clients opencode,cursor,claude-desktop  # Specific clients
 python install.py --clients manual             # Just print config
 python install.py --dry-run --clients all      # Preview without writing
 python install.py --no-venv --clients cursor   # Skip venv creation
@@ -373,9 +373,9 @@ davinci-resolve-mcp/
 │   ├── server.py                # Compound MCP server — 28 tools (default)
 │   ├── resolve_mcp_server.py    # Full MCP server — 356 tools (power users)
 │   └── utils/                   # Platform detection, Resolve connection helpers
-├── docs/
-│   └── resolve_scripting_api.txt # Official Resolve Scripting API reference
-└── examples/                    # Getting started, markers, media, timeline examples
+└── docs/
+    ├── resolve_scripting_api.txt # Official Resolve Scripting API reference
+    └── LIVE_API_DISCOVERY_v20.3.2.9.md  # Live API enumeration results
 ```
 
 ### Contributing
@@ -442,7 +442,7 @@ We welcome contributions! The following areas especially need help:
 - **`timeline_item_fusion` cache actions** — added `get_cache_enabled` and `set_cache` actions
 - **Fusion node graph reference** — docstring includes common tool IDs (Merge, TextPlus, Background, Transform, ColorCorrector, DeltaKeyer, etc.)
 
-For older versions, see the [releases page](https://github.com/samuelgursky/davinci-resolve-mcp/releases).
+For older versions, see the [releases page](https://github.com/DragonJAR/davinci-resolve-mcp/releases).
 
 ## Troubleshooting
 

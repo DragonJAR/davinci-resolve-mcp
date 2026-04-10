@@ -95,7 +95,7 @@ except ImportError as e:
     logger.error(f"Cannot import DaVinciResolveScript: {e}")
 
 
-def _try_connect():
+def _try_connect() -> Optional[Any]:
     """Attempt to connect to Resolve once. Returns resolve object or None."""
     global resolve
     if dvr_script is None:
@@ -103,9 +103,7 @@ def _try_connect():
     try:
         resolve = dvr_script.scriptapp("Resolve")
         if resolve:
-            logger.info(
-                f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}"
-            )
+            logger.info(f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}")
         return resolve
     except Exception as e:
         logger.error(f"Connection error: {e}")
@@ -113,7 +111,7 @@ def _try_connect():
         return None
 
 
-def _launch_resolve():
+def _launch_resolve() -> bool:
     """Launch DaVinci Resolve and wait for it to become available."""
     sys_name = platform.system().lower()
     if sys_name == "darwin":
@@ -146,7 +144,7 @@ def _launch_resolve():
     return False
 
 
-def get_resolve():
+def get_resolve() -> Optional[Any]:
     """Lazy connection to Resolve — connects on first tool call, auto-launches if needed."""
     global resolve
     if resolve is not None:
@@ -163,7 +161,7 @@ def get_resolve():
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def _resolve_safe_dir(path):
+def _resolve_safe_dir(path: str) -> str:
     """Redirect sandbox/temp paths that Resolve can't access to ~/Desktop/resolve-stills.
 
     Covers macOS (/var/folders, /private/var), Linux (/tmp, /var/tmp),
@@ -178,9 +176,9 @@ def _resolve_safe_dir(path):
     elif platform.system() == "Windows":
         # Check if path is under the system temp directory (e.g. AppData\Local\Temp)
         try:
-            _is_sandbox = os.path.commonpath(
-                [os.path.abspath(path), os.path.abspath(system_temp)]
-            ) == os.path.abspath(system_temp)
+            _is_sandbox = os.path.commonpath([os.path.abspath(path), os.path.abspath(system_temp)]) == os.path.abspath(
+                system_temp
+            )
         except ValueError:
             # Different drives on Windows
             _is_sandbox = False
@@ -189,15 +187,15 @@ def _resolve_safe_dir(path):
     return path
 
 
-def _err(msg):
+def _err(msg: str) -> Dict[str, str]:
     return {"error": msg}
 
 
-def _ok(**kw):
+def _ok(**kw) -> Dict[str, Any]:
     return {"success": True, **kw}
 
 
-def _check():
+def _check() -> tuple[Optional[Any], Optional[Any], Optional[Dict[str, str]]]:
     resolve = get_resolve()
     if resolve is None:
         return None, None, _err("Not connected to DaVinci Resolve. Is Resolve running?")
@@ -208,7 +206,7 @@ def _check():
     return pm, proj, None
 
 
-def _get_mp():
+def _get_mp() -> tuple[Optional[Any], Optional[Any], Optional[Any], Optional[Dict[str, str]]]:
     pm, proj, err = _check()
     if err:
         return None, None, None, err
@@ -218,7 +216,7 @@ def _get_mp():
     return pm, proj, mp, None
 
 
-def _get_tl():
+def _get_tl() -> tuple[Optional[Any], Optional[Any], Optional[Dict[str, str]]]:
     pm, proj, err = _check()
     if err:
         return None, None, err
@@ -239,7 +237,7 @@ def _validate_path(user_path: str, base_dir: str = None) -> str:
     return resolved
 
 
-def _get_item(p):
+def _get_item(p: Dict[str, Any]) -> tuple[Optional[Any], Optional[Any], Optional[Dict[str, str]]]:
     proj, tl, err = _get_tl()
     if err:
         return None, None, err
@@ -256,7 +254,7 @@ def _get_item(p):
     return tl, items[item_index], None
 
 
-def _find_clip(folder, clip_id):
+def _find_clip(folder: Any, clip_id: str) -> Optional[Any]:
     for clip in folder.GetClipList() or []:
         if clip.GetUniqueId() == clip_id:
             return clip
@@ -267,7 +265,7 @@ def _find_clip(folder, clip_id):
     return None
 
 
-def _navigate_folder(mp, path):
+def _navigate_folder(mp: Any, path: str) -> Optional[Any]:
     root = mp.GetRootFolder()
     if not path or path in ("Master", "/", ""):
         return root
@@ -287,7 +285,7 @@ def _navigate_folder(mp, path):
     return current
 
 
-def _ser(obj):
+def _ser(obj: Any) -> Any:
     """Serialize Resolve API objects to JSON-safe values."""
     if obj is None:
         return None
@@ -301,7 +299,7 @@ def _ser(obj):
     return str(obj)
 
 
-def _unknown(action, valid):
+def _unknown(action: str, valid: List[str]) -> Dict[str, str]:
     return _err(f"Unknown action '{action}'. Valid actions: {', '.join(valid)}")
 
 
@@ -311,9 +309,7 @@ def _unknown(action, valid):
 
 
 @mcp.tool()
-def resolve_control(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def resolve_control(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """App-level DaVinci Resolve operations.
 
     Actions:
@@ -361,9 +357,7 @@ def resolve_control(
             "deliver",
         ]
         if p.get("page") not in valid_pages:
-            return _err(
-                f"Invalid page '{p.get('page')}'. Valid pages: {', '.join(valid_pages)}"
-            )
+            return _err(f"Invalid page '{p.get('page')}'. Valid pages: {', '.join(valid_pages)}")
         return {"success": bool(r.OpenPage(p["page"]))}
     elif action == "get_keyframe_mode":
         mode = r.GetKeyframeMode()
@@ -404,9 +398,7 @@ def resolve_control(
 
 
 @mcp.tool()
-def resolve_constants(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def resolve_constants(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Expose API constants from the DaVinci Resolve Scripting API.
 
     Actions:
@@ -623,9 +615,7 @@ def resolve_constants(
     elif action == "get":
         cat = p.get("category", "")
         if cat not in all_constants:
-            return _err(
-                f"Unknown category: {cat}. Use list_categories to see available."
-            )
+            return _err(f"Unknown category: {cat}. Use list_categories to see available.")
         return {"category": cat, "constants": all_constants[cat]}
     elif action == "all":
         return {"categories": all_constants}
@@ -639,9 +629,7 @@ def resolve_constants(
 
 
 @mcp.tool()
-def layout_presets(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def layout_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Manage DaVinci Resolve UI layout presets.
 
     Actions:
@@ -675,9 +663,7 @@ def layout_presets(
         return {"success": bool(r.ImportLayoutPreset(p["path"]))}
     elif action == "delete":
         return {"success": bool(r.DeleteLayoutPreset(p["name"]))}
-    return _unknown(
-        action, ["save", "load", "update", "export", "import_preset", "delete"]
-    )
+    return _unknown(action, ["save", "load", "update", "export", "import_preset", "delete"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -686,9 +672,7 @@ def layout_presets(
 
 
 @mcp.tool()
-def render_presets(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def render_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Import/export render and burn-in presets.
 
     Actions:
@@ -714,9 +698,7 @@ def render_presets(
         return {"success": bool(r.ImportBurnInPreset(p["path"]))}
     elif action == "export_burnin":
         return {"success": bool(r.ExportBurnInPreset(p["name"], p["path"]))}
-    return _unknown(
-        action, ["import_render", "export_render", "import_burnin", "export_burnin"]
-    )
+    return _unknown(action, ["import_render", "export_render", "import_burnin", "export_burnin"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -725,9 +707,7 @@ def render_presets(
 
 
 @mcp.tool()
-def project_manager(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def project_manager(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Manage DaVinci Resolve projects.
 
     Actions:
@@ -750,23 +730,16 @@ def project_manager(
             "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
         )
     pm = r.GetProjectManager()
-
+    # NOTE: Resolve API has alternative method names:
+    #   GetProjectListInCurrentFolder = GetProjectList (alias)
     if action == "list":
         return {"projects": pm.GetProjectListInCurrentFolder()}
     elif action == "get_current":
         proj = pm.GetCurrentProject()
-        return (
-            {"name": proj.GetName(), "id": proj.GetUniqueId()}
-            if proj
-            else _err("No project open")
-        )
+        return {"name": proj.GetName(), "id": proj.GetUniqueId()} if proj else _err("No project open")
     elif action == "create":
         proj = pm.CreateProject(p["name"])
-        return (
-            _ok(name=proj.GetName())
-            if proj
-            else _err(f"Failed to create '{p['name']}'")
-        )
+        return _ok(name=proj.GetName()) if proj else _err(f"Failed to create '{p['name']}'")
     elif action == "load":
         proj = pm.LoadProject(p["name"])
         return _ok() if proj else _err(f"Failed to load '{p['name']}'")
@@ -774,11 +747,7 @@ def project_manager(
         return {"success": bool(pm.SaveProject())}
     elif action == "close":
         proj = pm.GetCurrentProject()
-        return (
-            {"success": bool(pm.CloseProject(proj))}
-            if proj
-            else _err("No project open")
-        )
+        return {"success": bool(pm.CloseProject(proj))} if proj else _err("No project open")
     elif action == "delete":
         return {"success": bool(pm.DeleteProject(p["name"]))}
     elif action == "import_project":
@@ -786,11 +755,7 @@ def project_manager(
         return {"success": bool(pm.ImportProject(path, p.get("name")))}
     elif action == "export_project":
         path = _validate_path(p["path"])
-        return {
-            "success": bool(
-                pm.ExportProject(p["name"], path, p.get("with_stills_and_luts", True))
-            )
-        }
+        return {"success": bool(pm.ExportProject(p["name"], path, p.get("with_stills_and_luts", True)))}
     elif action == "archive":
         path = _validate_path(p["path"])
         return {
@@ -831,9 +796,7 @@ def project_manager(
 
 
 @mcp.tool()
-def project_manager_folders(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def project_manager_folders(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Navigate and manage project folders in the Project Manager.
 
     Actions:
@@ -852,7 +815,8 @@ def project_manager_folders(
             "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
         )
     pm = r.GetProjectManager()
-
+    # NOTE: Resolve API has alternative method names:
+    #   GetFolderListInCurrentFolder = GetFolderList (alias)
     if action == "list":
         return {"folders": pm.GetFolderListInCurrentFolder()}
     elif action == "get_current":
@@ -879,9 +843,7 @@ def project_manager_folders(
 
 
 @mcp.tool()
-def project_manager_cloud(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def project_manager_cloud(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Cloud project operations (requires DaVinci Resolve cloud infrastructure).
 
     Actions:
@@ -900,20 +862,14 @@ def project_manager_cloud(
 
     if action == "create":
         proj = pm.CreateCloudProject(p["settings"])
-        return (
-            _ok(name=proj.GetName()) if proj else _err("Failed to create cloud project")
-        )
+        return _ok(name=proj.GetName()) if proj else _err("Failed to create cloud project")
     elif action == "load":
         proj = pm.LoadCloudProject(p["settings"])
-        return (
-            _ok(name=proj.GetName()) if proj else _err("Failed to load cloud project")
-        )
+        return _ok(name=proj.GetName()) if proj else _err("Failed to load cloud project")
     elif action == "import_project":
         return {"success": bool(pm.ImportCloudProject(p["path"], p["settings"]))}
     elif action == "restore":
-        return {
-            "success": bool(pm.RestoreCloudProject(p["folder_path"], p["settings"]))
-        }
+        return {"success": bool(pm.RestoreCloudProject(p["folder_path"], p["settings"]))}
     return _unknown(action, ["create", "load", "import_project", "restore"])
 
 
@@ -923,9 +879,7 @@ def project_manager_cloud(
 
 
 @mcp.tool()
-def project_manager_database(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def project_manager_database(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Manage DaVinci Resolve project databases.
 
     Actions:
@@ -940,7 +894,8 @@ def project_manager_database(
             "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
         )
     pm = r.GetProjectManager()
-
+    # NOTE: Resolve API has alternative method names:
+    #   GetDatabaseList = GetDatabases (alias)
     if action == "get_current":
         return pm.GetCurrentDatabase()
     elif action == "list":
@@ -956,9 +911,7 @@ def project_manager_database(
 
 
 @mcp.tool()
-def project_settings(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def project_settings(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Project metadata, settings, and color groups.
 
     Actions:
@@ -1036,11 +989,7 @@ def project_settings(
                 return {"success": bool(proj.DeleteColorGroup(g))}
         return _err(f"Color group '{p['name']}' not found")
     elif action == "apply_fairlight_preset":
-        return {
-            "success": bool(
-                proj.ApplyFairlightPresetToCurrentTimeline(p["preset_name"])
-            )
-        }
+        return {"success": bool(proj.ApplyFairlightPresetToCurrentTimeline(p["preset_name"]))}
     return _unknown(
         action,
         [
@@ -1141,11 +1090,7 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
     elif action == "get_format_and_codec":
         return _ser(proj.GetCurrentRenderFormatAndCodec())
     elif action == "set_format_and_codec":
-        return {
-            "success": bool(
-                proj.SetCurrentRenderFormatAndCodec(p["format"], p["codec"])
-            )
-        }
+        return {"success": bool(proj.SetCurrentRenderFormatAndCodec(p["format"], p["codec"]))}
     elif action == "get_mode":
         return {"mode": proj.GetCurrentRenderMode()}
     elif action == "set_mode":
@@ -1201,9 +1146,7 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
 
 
 @mcp.tool()
-def media_storage(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def media_storage(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Browse storage volumes and import media into the Media Pool.
 
     Actions:
@@ -1222,7 +1165,10 @@ def media_storage(
             "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
         )
     ms = r.GetMediaStorage()
-
+    # NOTE: Resolve API has alternative method names:
+    #   GetMountedVolumeList = GetMountedVolumes (alias)
+    #   GetFileList = GetFiles (alias)
+    #   GetSubFolderList = GetSubFolders (alias)
     if action == "get_volumes":
         return {"volumes": ms.GetMountedVolumeList()}
     elif action == "get_subfolders":
@@ -1308,11 +1254,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         return {"name": root.GetName(), "id": root.GetUniqueId()}
     elif action == "get_current_folder":
         f = mp.GetCurrentFolder()
-        return (
-            {"name": f.GetName(), "id": f.GetUniqueId()}
-            if f
-            else _err("No current folder")
-        )
+        return {"name": f.GetName(), "id": f.GetUniqueId()} if f else _err("No current folder")
     elif action == "set_current_folder":
         f = _navigate_folder(mp, p.get("path", ""))
         if not f:
@@ -1321,11 +1263,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
     elif action == "add_subfolder":
         parent = _navigate_folder(mp, p.get("parent_path", "")) or mp.GetCurrentFolder()
         f = mp.AddSubFolder(parent, p["name"])
-        return (
-            _ok(name=f.GetName(), id=f.GetUniqueId())
-            if f
-            else _err("Failed to create subfolder")
-        )
+        return _ok(name=f.GetName(), id=f.GetUniqueId()) if f else _err("Failed to create subfolder")
     elif action == "delete_folders":
         folders = []
         for fid in p["folder_ids"]:
@@ -1333,11 +1271,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
             for sub in root.GetSubFolderList() or []:
                 if sub.GetUniqueId() == fid:
                     folders.append(sub)
-        return (
-            {"success": bool(mp.DeleteFolders(folders))}
-            if folders
-            else _err("No folders found")
-        )
+        return {"success": bool(mp.DeleteFolders(folders))} if folders else _err("No folders found")
     elif action == "move_folders":
         target = _navigate_folder(mp, p["target_path"])
         if not target:
@@ -1352,11 +1286,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         return {"success": bool(mp.RefreshFolders())}
     elif action == "create_timeline":
         tl = mp.CreateEmptyTimeline(p["name"])
-        return (
-            _ok(name=tl.GetName(), id=tl.GetUniqueId())
-            if tl
-            else _err("Failed to create timeline")
-        )
+        return _ok(name=tl.GetName(), id=tl.GetUniqueId()) if tl else _err("Failed to create timeline")
     elif action == "create_timeline_from_clips":
         clip_infos = p.get("clip_infos", [])
         clip_ids = p.get("clip_ids", [])
@@ -1368,11 +1298,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         if not clips:
             return _err("No valid clips found")
         tl = mp.CreateTimelineFromClips(p["name"], clips)
-        return (
-            _ok(name=tl.GetName(), id=tl.GetUniqueId())
-            if tl
-            else _err("Failed to create timeline")
-        )
+        return _ok(name=tl.GetName(), id=tl.GetUniqueId()) if tl else _err("Failed to create timeline")
     elif action == "import_timeline":
         tl = mp.ImportTimelineFromFile(p["path"], p.get("options", {}))
         return _ok(name=tl.GetName()) if tl else _err("Failed to import timeline")
@@ -1383,11 +1309,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
             tl = proj.GetTimelineByIndex(i)
             if tl and tl.GetUniqueId() in p["timeline_ids"]:
                 timelines.append(tl)
-        return (
-            {"success": bool(mp.DeleteTimelines(timelines))}
-            if timelines
-            else _err("No timelines found")
-        )
+        return {"success": bool(mp.DeleteTimelines(timelines))} if timelines else _err("No timelines found")
     elif action == "append_to_timeline":
         clip_infos = p.get("clip_infos", [])
         clip_ids = p.get("clip_ids", [])
@@ -1410,11 +1332,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
     elif action == "delete_clips":
         clips = [_find_clip(root, cid) for cid in p["clip_ids"]]
         clips = [c for c in clips if c]
-        return (
-            {"success": bool(mp.DeleteClips(clips))}
-            if clips
-            else _err("No clips found")
-        )
+        return {"success": bool(mp.DeleteClips(clips))} if clips else _err("No clips found")
     elif action == "move_clips":
         target = _navigate_folder(mp, p["target_path"])
         if not target:
@@ -1445,11 +1363,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         if not left or not right:
             return _err("Left or right clip not found")
         result = mp.CreateStereoClip(left, right)
-        return (
-            _ok(name=result.GetName())
-            if result
-            else _err("Failed to create stereo clip")
-        )
+        return _ok(name=result.GetName()) if result else _err("Failed to create stereo clip")
     elif action == "auto_sync_audio":
         clips = [_find_clip(root, cid) for cid in p["clip_ids"]]
         clips = [c for c in clips if c]
@@ -1461,11 +1375,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         return {"clips": [{"name": c.GetName(), "id": c.GetUniqueId()} for c in sel]}
     elif action == "set_selected":
         clip = _find_clip(root, p["clip_id"])
-        return (
-            {"success": bool(mp.SetSelectedClip(clip))}
-            if clip
-            else _err("Clip not found")
-        )
+        return {"success": bool(mp.SetSelectedClip(clip))} if clip else _err("Clip not found")
     elif action == "get_clip_mattes":
         clip = _find_clip(root, p["clip_id"])
         return {"mattes": mp.GetClipMatteList(clip)} if clip else _err("Clip not found")
@@ -1479,11 +1389,7 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
             return _err("Clip not found")
         return {"success": bool(mp.DeleteClipMattes(clip, p["paths"]))}
     elif action == "import_folder":
-        return {
-            "success": bool(
-                mp.ImportFolderFromFile(p["path"], p.get("source_clips_path", ""))
-            )
-        }
+        return {"success": bool(mp.ImportFolderFromFile(p["path"], p.get("source_clips_path", "")))}
     return _unknown(
         action,
         [
@@ -1548,15 +1454,16 @@ def folder(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
         return _err(f"Folder not found: {folder_path}")
 
     if action == "get_clips":
+        # NOTE: Resolve API has alternative method names:
+        #   GetClipList = GetClips (alias)
+        #   GetSubFolderList = GetSubFolders (alias)
         clips = f.GetClipList() or []
         return {"clips": [{"name": c.GetName(), "id": c.GetUniqueId()} for c in clips]}
     elif action == "get_name":
         return {"name": f.GetName()}
     elif action == "get_subfolders":
         subs = f.GetSubFolderList() or []
-        return {
-            "subfolders": [{"name": s.GetName(), "id": s.GetUniqueId()} for s in subs]
-        }
+        return {"subfolders": [{"name": s.GetName(), "id": s.GetUniqueId()} for s in subs]}
     elif action == "is_stale":
         return {"stale": bool(f.GetIsFolderStale())}
     elif action == "get_unique_id":
@@ -1588,9 +1495,7 @@ def folder(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
 
 
 @mcp.tool()
-def media_pool_item(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def media_pool_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Operations on a media pool clip. Identify clip by clip_id.
 
     Actions:
@@ -1670,9 +1575,7 @@ def media_pool_item(
         mark_out = p.get("mark_out", 0)
         if mark_in > mark_out:
             return _err(f"mark_in ({mark_in}) must be <= mark_out ({mark_out})")
-        return {
-            "success": bool(clip.SetMarkInOut(mark_in, mark_out, p.get("type", "all")))
-        }
+        return {"success": bool(clip.SetMarkInOut(mark_in, mark_out, p.get("type", "all")))}
     elif action == "clear_mark_in_out":
         return {"success": bool(clip.ClearMarkInOut(p.get("type", "all")))}
     return _unknown(
@@ -1709,9 +1612,7 @@ def media_pool_item(
 
 
 @mcp.tool()
-def media_pool_item_markers(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def media_pool_item_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Markers and flags on media pool clips. Identify clip by clip_id.
 
     Actions:
@@ -1755,9 +1656,7 @@ def media_pool_item_markers(
     elif action == "get_by_custom_data":
         return {"markers": _ser(clip.GetMarkerByCustomData(p["custom_data"]))}
     elif action == "update_custom_data":
-        return {
-            "success": bool(clip.UpdateMarkerCustomData(p["frame"], p["custom_data"]))
-        }
+        return {"success": bool(clip.UpdateMarkerCustomData(p["frame"], p["custom_data"]))}
     elif action == "get_custom_data":
         return {"data": clip.GetMarkerCustomData(p["frame"])}
     elif action == "delete_by_color":
@@ -1872,17 +1771,11 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         for i in range(1, count + 1):
             tl = proj.GetTimelineByIndex(i)
             if tl:
-                timelines.append(
-                    {"name": tl.GetName(), "id": tl.GetUniqueId(), "index": i}
-                )
+                timelines.append({"name": tl.GetName(), "id": tl.GetUniqueId(), "index": i})
         return {"timelines": timelines}
     elif action == "set_current":
         tl = proj.GetTimelineByIndex(p["index"])
-        return (
-            {"success": bool(proj.SetCurrentTimeline(tl))}
-            if tl
-            else _err(f"No timeline at index {p['index']}")
-        )
+        return {"success": bool(proj.SetCurrentTimeline(tl))} if tl else _err(f"No timeline at index {p['index']}")
 
     # Remaining actions need current timeline
     tl = proj.GetCurrentTimeline()
@@ -1923,25 +1816,17 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
     elif action == "get_track_sub_type":
         return {"sub_type": tl.GetTrackSubType(p["track_type"], p["index"])}
     elif action == "set_track_enable":
-        return {
-            "success": bool(
-                tl.SetTrackEnable(p["track_type"], p["index"], p["enabled"])
-            )
-        }
+        return {"success": bool(tl.SetTrackEnable(p["track_type"], p["index"], p["enabled"]))}
     elif action == "get_track_enabled":
         return {"enabled": bool(tl.GetIsTrackEnabled(p["track_type"], p["index"]))}
     elif action == "set_track_lock":
-        return {
-            "success": bool(tl.SetTrackLock(p["track_type"], p["index"], p["locked"]))
-        }
+        return {"success": bool(tl.SetTrackLock(p["track_type"], p["index"], p["locked"]))}
     elif action == "get_track_locked":
         return {"locked": bool(tl.GetIsTrackLocked(p["track_type"], p["index"]))}
     elif action == "get_track_name":
         return {"name": tl.GetTrackName(p["track_type"], p["index"])}
     elif action == "set_track_name":
-        return {
-            "success": bool(tl.SetTrackName(p["track_type"], p["index"], p["name"]))
-        }
+        return {"success": bool(tl.SetTrackName(p["track_type"], p["index"], p["name"]))}
     elif action == "get_items":
         items = tl.GetItemListInTrack(p["track_type"], p["index"])
         return {
@@ -2027,11 +1912,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         return {"available": g is not None}
     elif action == "get_media_pool_item":
         mpi = tl.GetMediaPoolItem()
-        return (
-            {"name": mpi.GetName(), "id": mpi.GetUniqueId()}
-            if mpi
-            else {"name": None, "id": None}
-        )
+        return {"name": mpi.GetName(), "id": mpi.GetUniqueId()} if mpi else {"name": None, "id": None}
     elif action == "get_mark_in_out":
         return _ser(tl.GetMarkInOut())
     elif action == "set_mark_in_out":
@@ -2039,9 +1920,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         mark_out = p.get("mark_out", 0)
         if mark_in > mark_out:
             return _err(f"mark_in ({mark_in}) must be <= mark_out ({mark_out})")
-        return {
-            "success": bool(tl.SetMarkInOut(mark_in, mark_out, p.get("type", "all")))
-        }
+        return {"success": bool(tl.SetMarkInOut(mark_in, mark_out, p.get("type", "all")))}
     elif action == "clear_mark_in_out":
         return {"success": bool(tl.ClearMarkInOut(p.get("type", "all")))}
     elif action == "convert_to_stereo":
@@ -2054,9 +1933,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         state = tl.GetVoiceIsolationState(p["track_index"])
         return _ser(state) if state else {"isEnabled": False, "amount": 0}
     elif action == "set_voice_isolation_state":
-        return {
-            "success": bool(tl.SetVoiceIsolationState(p["track_index"], p["state"]))
-        }
+        return {"success": bool(tl.SetVoiceIsolationState(p["track_index"], p["state"]))}
     return _unknown(
         action,
         [
@@ -2115,9 +1992,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
 
 @mcp.tool()
-def timeline_markers(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def timeline_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Markers and playhead operations on the current timeline.
 
     Actions:
@@ -2157,9 +2032,7 @@ def timeline_markers(
     elif action == "get_by_custom_data":
         return {"markers": _ser(tl.GetMarkerByCustomData(p["custom_data"]))}
     elif action == "update_custom_data":
-        return {
-            "success": bool(tl.UpdateMarkerCustomData(p["frame"], p["custom_data"]))
-        }
+        return {"success": bool(tl.UpdateMarkerCustomData(p["frame"], p["custom_data"]))}
     elif action == "get_custom_data":
         return {"data": tl.GetMarkerCustomData(p["frame"])}
     elif action == "delete_by_color":
@@ -2174,11 +2047,7 @@ def timeline_markers(
         return {"success": bool(tl.SetCurrentTimecode(p["timecode"]))}
     elif action == "get_current_video_item":
         it = tl.GetCurrentVideoItem()
-        return (
-            {"name": it.GetName(), "id": it.GetUniqueId()}
-            if it
-            else {"name": None, "id": None}
-        )
+        return {"name": it.GetName(), "id": it.GetUniqueId()} if it else {"name": None, "id": None}
     elif action == "get_thumbnail":
         return _ser(tl.GetCurrentClipThumbnailImage())
     return _unknown(
@@ -2260,9 +2129,7 @@ def timeline_ai(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
 
 
 @mcp.tool()
-def timeline_item(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Properties, transforms, speed, keyframes, and metadata for a timeline item.
     Identify by track_type, track_index, item_index.
 
@@ -2364,11 +2231,7 @@ def timeline_item(
                 "crop": crop_props,
                 "retime": retime_props,
                 "misc": misc_props,
-                "all": video_props
-                + composite_props
-                + crop_props
-                + retime_props
-                + misc_props,
+                "all": video_props + composite_props + crop_props + retime_props + misc_props,
             },
             "count": 26,
             "note": "These 26 keys are valid for GetProperty(key) and SetProperty(key, value)",
@@ -2405,11 +2268,7 @@ def timeline_item(
         return {"id": item.GetUniqueId()}
     elif action == "get_media_pool_item":
         mpi = item.GetMediaPoolItem()
-        return (
-            {"name": mpi.GetName(), "id": mpi.GetUniqueId()}
-            if mpi
-            else {"name": None, "id": None}
-        )
+        return {"name": mpi.GetName(), "id": mpi.GetUniqueId()} if mpi else {"name": None, "id": None}
     elif action == "get_stereo_convergence":
         return {"values": _ser(item.GetStereoConvergenceValues())}
     elif action == "get_stereo_left_window":
@@ -2418,16 +2277,10 @@ def timeline_item(
         return {"params": _ser(item.GetStereoRightFloatingWindowParams())}
     elif action == "get_linked_items":
         linked = item.GetLinkedItems() or []
-        return {
-            "items": [{"name": it.GetName(), "id": it.GetUniqueId()} for it in linked]
-        }
+        return {"items": [{"name": it.GetName(), "id": it.GetUniqueId()} for it in linked]}
     elif action == "get_track_type_and_index":
         result = item.GetTrackTypeAndIndex()
-        return (
-            {"track_type": result[0], "track_index": result[1]}
-            if result
-            else _err("Failed")
-        )
+        return {"track_type": result[0], "track_index": result[1]} if result else _err("Failed")
     elif action == "get_source_audio_mapping":
         return {"mapping": item.GetSourceAudioChannelMapping()}
     elif action == "load_burnin_preset":
@@ -2461,9 +2314,7 @@ def timeline_item(
             if isinstance(val, str):
                 # Try exact match first
                 if val in valid_processes:
-                    val = process_map.get(
-                        val.lower().replace("-", " ").replace("_", " "), 1
-                    )
+                    val = process_map.get(val.lower().replace("-", " ").replace("_", " "), 1)
                 else:
                     # Try normalized lookup
                     normalized = val.lower().replace("-", " ").replace("_", " ")
@@ -2479,14 +2330,8 @@ def timeline_item(
             me = p["motion_estimation"]
             if isinstance(me, int) and (me < 0 or me > 6):
                 return _err(f"Invalid motion_estimation: {me}. Must be integer 0-6")
-            results["motion_estimation"] = bool(
-                item.SetProperty("MotionEstimation", me)
-            )
-        return (
-            _ok(**results)
-            if results
-            else _err("Specify process (0-3 or name) and/or motion_estimation (0-6)")
-        )
+            results["motion_estimation"] = bool(item.SetProperty("MotionEstimation", me))
+        return _ok(**results) if results else _err("Specify process (0-3 or name) and/or motion_estimation (0-6)")
 
     # ── Transform ──
     elif action == "get_transform":
@@ -2524,11 +2369,7 @@ def timeline_item(
         for k, v in p.items():
             if k in valid:
                 results[k] = bool(item.SetProperty(k, v))
-        return (
-            _ok(**results)
-            if results
-            else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
-        )
+        return _ok(**results) if results else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
 
     # ── Crop ──
     elif action == "get_crop":
@@ -2556,24 +2397,16 @@ def timeline_item(
             if k in valid:
                 if k == "CropRetain":
                     if not isinstance(v, bool):
-                        return _err(
-                            f"CropRetain must be a boolean, got: {type(v).__name__}"
-                        )
+                        return _err(f"CropRetain must be a boolean, got: {type(v).__name__}")
                 elif k in range_keys:
                     try:
                         fv = float(v)
                         if fv < 0.0 or fv > 1.0:
                             return _err(f"{k} must be in range [0.0, 1.0], got: {v}")
                     except (ValueError, TypeError):
-                        return _err(
-                            f"{k} must be a number in range [0.0, 1.0], got: {v}"
-                        )
+                        return _err(f"{k} must be a number in range [0.0, 1.0], got: {v}")
                 results[k] = bool(item.SetProperty(k, v))
-        return (
-            _ok(**results)
-            if results
-            else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
-        )
+        return _ok(**results) if results else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
 
     # ── Composite ──
     elif action == "get_composite":
@@ -2614,13 +2447,9 @@ def timeline_item(
         if "CompositeMode" in p:
             mode = p["CompositeMode"]
             if isinstance(mode, int) or mode not in valid_modes:
-                return _err(
-                    f"Invalid CompositeMode: {mode}. Valid strings: {', '.join(sorted(valid_modes))}"
-                )
+                return _err(f"Invalid CompositeMode: {mode}. Valid strings: {', '.join(sorted(valid_modes))}")
             results["CompositeMode"] = bool(item.SetProperty("CompositeMode", mode))
-        return (
-            _ok(**results) if results else _err("Specify Opacity and/or CompositeMode")
-        )
+        return _ok(**results) if results else _err("Specify Opacity and/or CompositeMode")
 
     # ── Audio ──
     elif action == "get_audio":
@@ -2643,14 +2472,10 @@ def timeline_item(
         for i in range(count):
             kf = item.GetKeyframeAtIndex(prop, i)
             val = item.GetPropertyAtKeyframeIndex(prop, i)
-            kfs.append(
-                {"frame": kf.get("frame") if isinstance(kf, dict) else kf, "value": val}
-            )
+            kfs.append({"frame": kf.get("frame") if isinstance(kf, dict) else kf, "value": val})
         return {"property": prop, "count": count, "keyframes": kfs}
     elif action == "add_keyframe":
-        return {
-            "success": bool(item.AddKeyframe(p["property"], p["frame"], p["value"]))
-        }
+        return {"success": bool(item.AddKeyframe(p["property"], p["frame"], p["value"]))}
     elif action == "modify_keyframe":
         kw = {}
         if "new_value" in p:
@@ -2664,13 +2489,7 @@ def timeline_item(
         valid = ["Linear", "Bezier", "EaseIn", "EaseOut", "EaseInOut"]
         if p.get("interpolation") not in valid:
             return _err(f"Invalid interpolation. Must be one of: {', '.join(valid)}")
-        return {
-            "success": bool(
-                item.SetKeyframeInterpolation(
-                    p["property"], p["frame"], p["interpolation"]
-                )
-            )
-        }
+        return {"success": bool(item.SetKeyframeInterpolation(p["property"], p["frame"], p["interpolation"]))}
     elif action == "set_name":
         return {"success": bool(item.SetName(p["name"]))}
 
@@ -2727,9 +2546,7 @@ def timeline_item(
 
 
 @mcp.tool()
-def timeline_item_markers(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def timeline_item_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Markers, flags, and clip color on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -2774,9 +2591,7 @@ def timeline_item_markers(
     elif action == "get_by_custom_data":
         return {"markers": _ser(item.GetMarkerByCustomData(p["custom_data"]))}
     elif action == "update_custom_data":
-        return {
-            "success": bool(item.UpdateMarkerCustomData(p["frame"], p["custom_data"]))
-        }
+        return {"success": bool(item.UpdateMarkerCustomData(p["frame"], p["custom_data"]))}
     elif action == "get_custom_data":
         return {"data": item.GetMarkerCustomData(p["frame"])}
     elif action == "delete_by_color":
@@ -2824,9 +2639,7 @@ def timeline_item_markers(
 
 
 @mcp.tool()
-def timeline_item_fusion(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def timeline_item_fusion(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Fusion composition operations on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -2874,9 +2687,7 @@ def timeline_item_fusion(
         comp = item.LoadFusionCompByName(p["name"])
         return _ok() if comp else _err("Failed to load comp")
     elif action == "rename_comp":
-        return {
-            "success": bool(item.RenameFusionCompByName(p["old_name"], p["new_name"]))
-        }
+        return {"success": bool(item.RenameFusionCompByName(p["old_name"], p["new_name"]))}
     elif action == "get_cache_enabled":
         return {"enabled": item.GetIsFusionOutputCacheEnabled()}
     elif action == "set_cache":
@@ -2906,9 +2717,7 @@ def timeline_item_fusion(
 
 
 @mcp.tool()
-def timeline_item_color(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def timeline_item_color(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Color grading, versions, LUTs, cache, and AI tools on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -2966,19 +2775,11 @@ def timeline_item_color(
     elif action == "load_version":
         return {"success": bool(item.LoadVersionByName(p["name"], p.get("type", 0)))}
     elif action == "rename_version":
-        return {
-            "success": bool(
-                item.RenameVersionByName(p["old_name"], p["new_name"], p.get("type", 0))
-            )
-        }
+        return {"success": bool(item.RenameVersionByName(p["old_name"], p["new_name"], p.get("type", 0)))}
     elif action == "delete_version":
         return {"success": bool(item.DeleteVersionByName(p["name"], p.get("type", 0)))}
     elif action == "get_node_graph":
-        g = (
-            item.GetNodeGraph(p["layer_index"])
-            if "layer_index" in p
-            else item.GetNodeGraph()
-        )
+        g = item.GetNodeGraph(p["layer_index"]) if "layer_index" in p else item.GetNodeGraph()
         return {"available": g is not None}
     elif action == "get_color_group":
         g = item.GetColorGroup()
@@ -3043,9 +2844,7 @@ def timeline_item_color(
 
 
 @mcp.tool()
-def timeline_item_takes(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def timeline_item_takes(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Take management on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -3071,11 +2870,7 @@ def timeline_item_takes(
         clip = _find_clip(mp.GetRootFolder(), p["clip_id"])
         if not clip:
             return _err(f"Clip not found: {p['clip_id']}")
-        return {
-            "success": bool(
-                item.AddTake(clip, p.get("start_frame", 0), p.get("end_frame", 0))
-            )
-        }
+        return {"success": bool(item.AddTake(clip, p.get("start_frame", 0), p.get("end_frame", 0)))}
     elif action == "get_count":
         return {"count": item.GetTakesCount()}
     elif action == "get_selected_index":
@@ -3155,18 +2950,10 @@ def gallery(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, A
         return _err("Album index out of range")
     elif action == "get_still_albums":
         albums = gal.GetGalleryStillAlbums() or []
-        return {
-            "albums": [
-                {"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)
-            ]
-        }
+        return {"albums": [{"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)]}
     elif action == "get_power_grade_albums":
         albums = gal.GetGalleryPowerGradeAlbums() or []
-        return {
-            "albums": [
-                {"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)
-            ]
-        }
+        return {"albums": [{"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)]}
     elif action == "create_still_album":
         album = gal.CreateGalleryStillAlbum()
         return _ok() if album else _err("Failed to create still album")
@@ -3194,9 +2981,7 @@ def gallery(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, A
 
 
 @mcp.tool()
-def gallery_stills(
-    action: str, params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def gallery_stills(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Manage stills in gallery albums (best results on Color page).
 
     Actions:
@@ -3290,9 +3075,7 @@ def gallery_stills(
             return err2
         still = tl.GrabStill()
         if not still:
-            return _err(
-                "GrabStill failed — ensure Color page is active with a clip under the playhead"
-            )
+            return _err("GrabStill failed — ensure Color page is active with a clip under the playhead")
         time.sleep(0.5)
         # Export using the live still reference with format fallback chain
         export_ok = False
@@ -3358,11 +3141,7 @@ def gallery_stills(
     elif action == "delete_stills":
         stills = album.GetStills() or []
         to_delete = [stills[i] for i in p["still_indices"] if i < len(stills)]
-        return (
-            {"success": bool(album.DeleteStills(to_delete))}
-            if to_delete
-            else _err("No valid still indices")
-        )
+        return {"success": bool(album.DeleteStills(to_delete))} if to_delete else _err("No valid still indices")
     return _unknown(
         action,
         [
@@ -3418,11 +3197,7 @@ def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
         _, item, err = _get_item(p)
         if err:
             return err
-        g = (
-            item.GetNodeGraph(p["layer_index"])
-            if "layer_index" in p
-            else item.GetNodeGraph()
-        )
+        g = item.GetNodeGraph(p["layer_index"]) if "layer_index" in p else item.GetNodeGraph()
     elif source in ("color_group_pre", "color_group_post"):
         _, proj, err = _check()
         if err:
@@ -3430,11 +3205,7 @@ def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
         groups = proj.GetColorGroupsList() or []
         for cg in groups:
             if cg.GetName() == p.get("group_name"):
-                g = (
-                    cg.GetPreClipNodeGraph()
-                    if source == "color_group_pre"
-                    else cg.GetPostClipNodeGraph()
-                )
+                g = cg.GetPreClipNodeGraph() if source == "color_group_pre" else cg.GetPostClipNodeGraph()
                 break
         if g is None:
             return _err(f"Color group '{p.get('group_name')}' not found")
@@ -3459,11 +3230,7 @@ def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
     elif action == "set_node_enabled":
         return {"success": bool(g.SetNodeEnabled(p["node_index"], p["enabled"]))}
     elif action == "apply_grade_from_drx":
-        return {
-            "success": bool(
-                g.ApplyGradeFromDRX(p["path"], p.get("grade_mode", p.get("mode", 0)))
-            )
-        }
+        return {"success": bool(g.ApplyGradeFromDRX(p["path"], p.get("grade_mode", p.get("mode", 0))))}
     elif action == "apply_arri_cdl_lut":
         return {"success": bool(g.ApplyArriCdlLut())}
     elif action == "reset_all_grades":
@@ -3531,11 +3298,7 @@ def color_group(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         if not tl:
             return _err("No timeline active. Open or create a timeline first.")
         clips = group.GetClipsInTimeline(tl) if tl else []
-        return {
-            "clips": [
-                {"name": c.GetName(), "id": c.GetUniqueId()} for c in (clips or [])
-            ]
-        }
+        return {"clips": [{"name": c.GetName(), "id": c.GetUniqueId()} for c in (clips or [])]}
     elif action == "get_pre_clip_graph":
         g = group.GetPreClipNodeGraph()
         return {"available": g is not None, "num_nodes": g.GetNumNodes() if g else 0}
@@ -3612,18 +3375,14 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
     if action == "add_tool":
         tool_type = p.get("tool_type")
         if not tool_type:
-            return _err(
-                "tool_type is required (e.g. 'Merge', 'Transform', 'TextPlus', 'Background')"
-            )
+            return _err("tool_type is required (e.g. 'Merge', 'Transform', 'TextPlus', 'Background')")
         x = p.get("x", -1)
         y = p.get("y", -1)
         comp.Lock()
         try:
             tool = comp.AddTool(tool_type, x, y)
             if not tool:
-                return _err(
-                    f"Failed to add tool '{tool_type}'. Check the tool ID is valid."
-                )
+                return _err(f"Failed to add tool '{tool_type}'. Check the tool ID is valid.")
             name = p.get("name")
             if name:
                 tool.SetAttrs({"TOOLS_Name": name})
@@ -3795,9 +3554,7 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         try:
             inp = tool[p["input_name"]]
             if not inp:
-                return _err(
-                    f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'"
-                )
+                return _err(f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'")
             inp[p["time"]] = p["value"]
             return _ok()
         finally:
@@ -3809,9 +3566,7 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             return _err(f"Tool '{p['tool_name']}' not found")
         inp = tool[p["input_name"]]
         if not inp:
-            return _err(
-                f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'"
-            )
+            return _err(f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'")
         keyframes = []
         kfs = inp.GetKeyFrames()
         if kfs:
@@ -3827,9 +3582,7 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         try:
             inp = tool[p["input_name"]]
             if not inp:
-                return _err(
-                    f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'"
-                )
+                return _err(f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'")
             inp.RemoveKeyFrame(p["time"])
             return _ok()
         finally:
@@ -3845,9 +3598,7 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         }
 
     elif action == "set_frame_range":
-        comp.SetAttrs(
-            {"COMPN_RenderStartTime": p["start"], "COMPN_RenderEndTime": p["end"]}
-        )
+        comp.SetAttrs({"COMPN_RenderStartTime": p["start"], "COMPN_RenderEndTime": p["end"]})
         return _ok()
 
     elif action == "render":
