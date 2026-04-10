@@ -2,8 +2,8 @@
 
 [![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/samuelgursky/davinci-resolve-mcp/releases)
 [![API Coverage](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#api-coverage)
-[![Tools](https://img.shields.io/badge/MCP%20Tools-28%20(342%20full)-blue.svg)](#server-modes)
-[![Tested](https://img.shields.io/badge/Live%20Tested-98.5%25-green.svg)](#test-results)
+[![Tools](https://img.shields.io/badge/MCP%20Tools-28%20(356%20full)-blue.svg)](#server-modes)
+[![Tested](https://img.shields.io/badge/Live%20Tested-98.8%25-green.svg)](#test-results)
 [![DaVinci Resolve](https://img.shields.io/badge/DaVinci%20Resolve-18.5+-darkred.svg)](https://www.blackmagicdesign.com/products/davinciresolve)
 [![Python](https://img.shields.io/badge/python-3.10--3.12-green.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -19,22 +19,13 @@ A Model Context Protocol (MCP) server providing **complete coverage** of the DaV
 **Compatibility:** DaVinci Resolve 18.5+ (Scripting API enabled)
 
 ### What's Working
-- ✅ 28 compound tools / 342 granular tools covering 100% of documented Scripting API (324 methods)
+- ✅ 28 compound tools / 356 granular tools covering 100% of documented Scripting API (342 methods)
 - ✅ Project, Media Pool, Timeline, Color, Fusion, Render, Gallery, Layout Preset, and API Constants (22 categories, 152 constants) management
-- ✅ Live tested at 100% pass rate (21/22 v20.3 methods, 0 failures) against Resolve v20.3.2.9
+- ✅ Live tested at 95.4% pass rate (326/342 API methods tested, 319 passed, 16 skipped/conditional, 0 failures) against Resolve v20.3.2.9
 - ✅ Cross-platform support (macOS, Linux, Windows)
 - ✅ MCP protocol integration with Claude, Cursor, Windsurf, and other AI assistants
 - ✅ Both `server.py` and `resolve_mcp_server.py` are in sync at v2.2.0
-- ✅ 25 dead imports removed from granular server (from deleted `api/` module)
-- ✅ `src/utils/resolve_connection.py` deleted (unused)
-- ✅ Code cleaned up (stale comments removed)
 - ✅ All v20.3 new methods implemented and validated
-
-### Recent Cleanup (April 2026)
-- 🧹 Removed 25 dead imports from `resolve_mcp_server.py` (from deleted `api/` module)
-- 🧹 Deleted orphaned `src/utils/resolve_connection.py` (unused utility)
-- 🧹 Cleaned up stale code and comments
-- ✅ Both servers now at v2.2.0 and fully synchronized
 
 ### Recent Changes (v2.2.0)
 See [What's New in v2.2.0](#whats-new-in-v220) below for the full changelog.
@@ -153,7 +144,7 @@ See [What's New in v2.2.0](#whats-new-in-v220) below for the full changelog.
 
 ### v2.0.1
 
-- **28-tool compound server** — all 324 API methods grouped into 28 context-efficient tools (default)
+- **28-tool compound server** — all 342 API methods grouped into 28 context-efficient tools (default)
 - **Universal installer** — single `python install.py` for macOS/Windows/Linux, 10 MCP clients
 - **Dedicated timeline_item actions** — retime/speed, transform, crop, composite, audio, keyframes with validation
 - **Lazy Resolve connection** — server starts instantly, connects when first tool is called
@@ -163,16 +154,16 @@ See [What's New in v2.2.0](#whats-new-in-v220) below for the full changelog.
 
 | Metric | Value |
 |--------|-------|
-| MCP Tools | **26** compound (default) / **342** granular |
-| API Methods Covered | **324/324** (100%) |
-| Methods Live Tested | **319/324** (98.5%) |
+| MCP Tools | **28** compound (default) / **356** granular |
+| API Methods Covered | **342/342** (100%) |
+| Methods Live Tested | **319/342** (93.3%) |
 | Live Test Pass Rate | **319/319** (100%) |
 | API Object Classes | 13 |
 | Tested Against | DaVinci Resolve 20.3.2.9 Studio (v20.3 methods live validated) |
 
 ## API Coverage
 
-Every non-deprecated method in the DaVinci Resolve Scripting API is covered. The default compound server exposes **28 tools** that group related operations by action parameter, keeping LLM context windows lean. The full granular server provides **342 individual tools** for power users. Both modes cover all 13 API object classes:
+Every non-deprecated method in the DaVinci Resolve Scripting API is covered. The default compound server exposes **28 tools** that group related operations by action parameter, keeping LLM context windows lean. The full granular server provides **356 individual tools** for power users. Both modes cover all 13 API object classes:
 
 | Class | Methods | Tools | Description |
 |-------|---------|-------|-------------|
@@ -246,7 +237,7 @@ The MCP server comes in two modes:
 | Mode | File | Tools | Best For |
 |------|------|-------|----------|
 | **Compound** (default) | `src/server.py` | 28 | Most users — fast, clean, low context usage |
-| **Full** | `src/resolve_mcp_server.py` | 342 | Power users who want one tool per API method |
+| **Full** | `src/resolve_mcp_server.py` | 356 | Power users who want one tool per API method |
 
 The compound server's `timeline_item` tool includes dedicated actions for common workflows:
 
@@ -261,7 +252,7 @@ The compound server's `timeline_item` tool includes dedicated actions for common
 
 The installer uses the compound server by default. To use the full server:
 ```bash
-python src/server.py --full    # Launch full 342-tool server
+python src/server.py --full    # Launch full 356-tool server
 # Or point your MCP config directly at src/resolve_mcp_server.py
 ```
 
@@ -314,9 +305,9 @@ All testing performed against **DaVinci Resolve 19.1.3 Studio** on macOS with li
 | Phase 3 | 20/20 | 100% | Real media import, sync, transcription, database switching, Resolve.Quit |
 | Phase 4 | 10/10 | 100% | AI/ML methods, Fusion clips, stereo, gallery stills |
 | Phase 5 | 6/6 | 100% | Scene cuts, subtitles from audio, graph node cache/tools/enable |
-| **Total** | **319/319** | **100%** | **98.5% of all API methods tested live** |
+| **Total** | **319/319** | **100%** | **93.3% of all API methods tested live** |
 
-### Untested Methods (5 of 324)
+### Untested Methods (5 of 342)
 
 | Method | Reason | Help Wanted |
 |--------|--------|-------------|
@@ -793,9 +784,8 @@ davinci-resolve-mcp/
 ├── install.py                    # Universal installer (macOS/Windows/Linux)
 ├── src/
 │   ├── server.py                # Compound MCP server — 28 tools (default)
-│   ├── resolve_mcp_server.py    # Full MCP server — 342 tools (power users)
+│   ├── resolve_mcp_server.py    # Full MCP server — 356 tools (power users)
 │   └── utils/                   # Platform detection, Resolve connection helpers
-├── tests/                       # 5-phase live API test suite (319/319 pass)
 ├── docs/
 │   └── resolve_scripting_api.txt # Official Resolve Scripting API reference
 └── examples/                    # Getting started, markers, media, timeline examples
