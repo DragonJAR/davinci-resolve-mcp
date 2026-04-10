@@ -145,7 +145,7 @@ See [What's New in v2.2.0](#whats-new-in-v220) below for the full changelog.
 ### v2.0.1
 
 - **28-tool compound server** — all 342 API methods grouped into 28 context-efficient tools (default)
-- **Universal installer** — single `python install.py` for macOS/Windows/Linux, 10 MCP clients
+- **Universal installer** — single `python install.py` for macOS/Windows/Linux, 11 MCP clients
 - **Dedicated timeline_item actions** — retime/speed, transform, crop, composite, audio, keyframes with validation
 - **Lazy Resolve connection** — server starts instantly, connects when first tool is called
 - **Bug fixes** — CreateMagicMask param type, GetCurrentClipThumbnailImage args, Python 3.13+ warning
@@ -206,6 +206,7 @@ The installer can automatically configure any of these clients:
 
 | Client | Config Written To |
 |--------|-------------------|
+| OpenCode | `~/.config/opencode/opencode.json` (global) or `opencode.json` (project root) |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Claude Code | `.mcp.json` (project root) |
 | Cursor | `~/.cursor/mcp.json` |
@@ -260,6 +261,25 @@ python src/server.py --full    # Launch full 356-tool server
 
 If you prefer to set things up yourself, add to your MCP client config:
 
+**OpenCode (uses unique format):**
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "davinci-resolve": {
+      "type": "local",
+      "command": ["/path/to/python", "/path/to/server.py"],
+      "enabled": true,
+      "environment": {
+        "RESOLVE_SCRIPT_API": "/path/to/resolve/api",
+        "PYTHONPATH": "/path/to/resolve/api/Modules"
+      }
+    }
+  }
+}
+```
+
+**Standard MCP clients:**
 ```json
 {
   "mcpServers": {
