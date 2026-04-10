@@ -3,7 +3,7 @@
 DaVinci Resolve MCP Server — Universal Installer
 
 Supports: macOS, Windows, Linux
-Configures: Claude Desktop, Claude Code, Cursor, VS Code (Copilot),
+Configures: OpenCode, Claude Desktop, Claude Code, Cursor, VS Code (Copilot),
             Windsurf, Cline, Roo Code, Zed, Continue, and manual setup.
 
 Usage:
@@ -227,6 +227,17 @@ def vscode_global_storage():
 
 MCP_CLIENTS = [
     {
+        "id": "opencode",
+        "name": "OpenCode",
+        "get_path": lambda: {
+            "Darwin": home() / ".config" / "opencode" / "opencode.json",
+            "Windows": appdata() / "opencode" / "opencode.json",
+            "Linux": xdg_config() / "opencode" / "opencode.json",
+        }.get(SYSTEM),
+        "config_key": "mcp",
+        "notes": "Terminal-based AI coding assistant (opencode.ai)",
+    },
+    {
         "id": "antigravity",
         "name": "Antigravity",
         "get_path": lambda: home() / ".gemini" / "antigravity" / "mcp_config.json",
@@ -356,6 +367,21 @@ def build_zed_entry(python_path, server_path, api_path):
     }
 
 
+def build_opencode_entry(python_path, server_path, api_path):
+    """Build OpenCode-specific server entry (uses mcp key with type/command format)."""
+    entry = {
+        "type": "local",
+        "command": [str(python_path), str(server_path)],
+        "enabled": True,
+    }
+    if api_path:
+        entry["environment"] = {
+            "RESOLVE_SCRIPT_API": str(api_path),
+            "PYTHONPATH": os.path.join(str(api_path), "Modules"),
+        }
+    return entry
+
+
 # ─── Config File Operations ──────────────────────────────────────────────────
 
 
@@ -391,10 +417,13 @@ def write_client_config(client, python_path, server_path, api_path, dry_run=Fals
 
     config_key = client["config_key"]
     is_zed = client["id"] == "zed"
+    is_opencode = client["id"] == "opencode"
 
     # Build the server entry
     if is_zed:
         server_entry = build_zed_entry(python_path, server_path, api_path)
+    elif is_opencode:
+        server_entry = build_opencode_entry(python_path, server_path, api_path)
     else:
         server_entry = build_server_entry(python_path, server_path, api_path)
 
@@ -418,12 +447,20 @@ def generate_manual_config(python_path, server_path, api_path):
     """Generate config snippets for manual setup."""
     entry = build_server_entry(python_path, server_path, api_path)
     zed_entry = build_zed_entry(python_path, server_path, api_path)
+    opencode_entry = build_opencode_entry(python_path, server_path, api_path)
 
     standard = json.dumps({"mcpServers": {"davinci-resolve": entry}}, indent=2)
     vscode_fmt = json.dumps({"servers": {"davinci-resolve": entry}}, indent=2)
     zed_fmt = json.dumps({"context_servers": {"davinci-resolve": zed_entry}}, indent=2)
+    opencode_fmt = json.dumps(
+        {
+            "$schema": "https://opencode.ai/config.json",
+            "mcp": {"davinci-resolve": opencode_entry},
+        },
+        indent=2,
+    )
 
-    return standard, vscode_fmt, zed_fmt
+    return standard, vscode_fmt, zed_fmt, opencode_fmt
 
 
 # ─── Virtual Environment ─────────────────────────────────────────────────────
@@ -536,9 +573,13 @@ def verify_resolve_connection(python_path, api_path):
 def print_banner():
     print()
     print(bold("  ╔══════════════════════════════════════════════════════╗"))
-    print(bold("  ║     DaVinci Resolve MCP Server — Installer v2.0    ║"))
+    print(bold("  ║     DaVinci Resolve MCP Server — Installer v2.2.0   ║"))
     print(bold("  ╠══════════════════════════════════════════════════════╣"))
-    print(bold("  ║  342 tools · 100% API coverage · 3 platforms       ║"))
+    print(
+        bold(
+            "  ║  28 compound tools · 356 granular · 100% API coverage · 3 platforms       ║"
+        )
+    )
     print(bold("  ╚══════════════════════════════════════════════════════╝"))
     print()
 
@@ -789,7 +830,7 @@ def main():
     if args.server:
         server_path = Path(args.server).resolve()
     else:
-        # Try to find the server script (prefer compound 26-tool server)
+        # Try to find the server script (prefer compound 28-tool server)
         candidates = [
             project_dir / "src" / "server.py",
             project_dir / "src" / "resolve_mcp_server.py",
@@ -864,11 +905,17 @@ def main():
 
     # Show manual config
     if show_manual:
-        standard, vscode_fmt, zed_fmt = generate_manual_config(
+        standard, vscode_fmt, zed_fmt, opencode_fmt = generate_manual_config(
             python_path, server_path, api_path
         )
         print(f"\n  {bold('Manual Configuration')}")
         print(f"  {'─' * 50}")
+        print(
+            f"\n  {cyan('OpenCode format')} (add to ~/.config/opencode/opencode.json):"
+        )
+        print()
+        for line in opencode_fmt.split("\n"):
+            print(f"    {line}")
         print(
             f"\n  {cyan('Standard format')} (Claude Desktop, Cursor, Windsurf, Cline, Roo Code, Continue):"
         )
