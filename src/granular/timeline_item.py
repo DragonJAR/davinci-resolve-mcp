@@ -1585,6 +1585,7 @@ def set_keyframe_interpolation(
         property_name: The name of the property with keyframe
         frame: Frame position of the keyframe
         interpolation_type: Type of interpolation. Options: 'Linear', 'Bezier', 'Ease-In', 'Ease-Out'
+            Valid: Linear, Bezier, EaseIn, EaseOut, EaseInOut
     """
     pm, current_project = get_current_project()
     if not current_project:
@@ -1704,6 +1705,7 @@ def set_timeline_item_composite(
         Args:
         timeline_item_id: The ID of the timeline item to modify
         composite_mode: Optional composite mode to set (e.g., 'Normal', 'Add', 'Multiply')
+            Valid: Normal, Add, Subtract, Multiply, Screen, Overlay, Darken, Lighten, ColorDodge, ColorBurn, LinearDodge, LinearBurn, HardLight, SoftLight, PinLight, VividLight, Difference, Exclusion, Hue
         opacity: Optional opacity value to set (0.0 to 1.0)
     """
     pm, current_project = get_current_project()
@@ -2208,6 +2210,7 @@ def ti_add_version(
         Args:
         version_name: Name for the new version.
         version_type: 0=Local, 1=Remote. Default: 0.
+            Valid: 0=local, 1=remote
         item_index: 0-based item index. Default: 0.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
@@ -2361,6 +2364,7 @@ def ti_delete_version(
         Args:
         version_name: Name of the version.
         version_type: 0=Local, 1=Remote. Default: 0.
+            Valid: 0=local, 1=remote
         item_index: 0-based item index. Default: 0.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
@@ -2800,6 +2804,7 @@ def ti_get_version_name_list(
 
         Args:
         version_type: 0=Local, 1=Remote. Default: 0.
+            Valid: 0=local, 1=remote
         item_index: 0-based item index. Default: 0.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
@@ -2868,6 +2873,7 @@ def ti_load_version(
         Args:
         version_name: Name of the version.
         version_type: 0=Local, 1=Remote. Default: 0.
+            Valid: 0=local, 1=remote
         item_index: 0-based item index. Default: 0.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)
@@ -2938,6 +2944,7 @@ def ti_rename_version(
         old_name: Current version name.
         new_name: New version name.
         version_type: 0=Local, 1=Remote. Default: 0.
+            Valid: 0=local, 1=remote
         item_index: 0-based item index. Default: 0.
     """
     item, err = _get_timeline_item(track_type, track_index, item_index)

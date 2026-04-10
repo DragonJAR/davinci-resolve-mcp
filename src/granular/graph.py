@@ -1087,6 +1087,7 @@ def graph_apply_grade_from_drx(
         Args:
         drx_path: Absolute path to the .drx file.
     grade_mode: 0=No keyframes, 1=Source Timecode aligned, 2=Start Frames aligned.
+        Valid: 0, 1, 2
     item_index: 0-based timeline item index. Default: 0.
     track_type: 'video' or 'audio'. Default: 'video'.
         Valid: "video", "audio", "subtitle"

@@ -1375,6 +1375,7 @@ def timeline_add_track(
         track_type: 'video', 'audio', or 'subtitle'.
         Valid: "video", "audio", "subtitle"
     sub_track_type: For audio: 'mono', 'stereo', '5.1', '7.1', 'adaptive'. Default: ''.
+        Valid: video", "audio", "subtitle
     new_track_options: Optional dict of track creation options.
     """
     _, tl, err = _get_timeline()
