@@ -2,7 +2,7 @@
 """
 DaVinci Resolve MCP Server (Compound Tools)
 
-27 compound tools covering 100% of the DaVinci Resolve Scripting API (324 methods).
+28 compound tools covering 100% of the DaVinci Resolve Scripting API (324 methods).
 Each tool groups related operations via an 'action' parameter.
 
 Usage:
@@ -10,7 +10,7 @@ Usage:
     python src/server.py --full       # Start the 342-tool granular server instead
 """
 
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 
 import base64
 import os
@@ -54,13 +54,14 @@ os.makedirs(log_dir, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(os.path.join(log_dir, "server.log"))]
+    handlers=[logging.FileHandler(os.path.join(log_dir, "server.log"))],
 )
 logger = logging.getLogger("resolve-mcp")
 
 # ─── MCP Server ───────────────────────────────────────────────────────────────
 
 from mcp.server.fastmcp import FastMCP
+
 mcp = FastMCP(
     "DaVinciResolveMCP",
     instructions=(
@@ -88,9 +89,11 @@ dvr_script = None
 
 try:
     import DaVinciResolveScript as dvr_script
+
     logger.info("DaVinciResolveScript module loaded")
 except ImportError as e:
     logger.error(f"Cannot import DaVinciResolveScript: {e}")
+
 
 def _try_connect():
     """Attempt to connect to Resolve once. Returns resolve object or None."""
@@ -100,12 +103,15 @@ def _try_connect():
     try:
         resolve = dvr_script.scriptapp("Resolve")
         if resolve:
-            logger.info(f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}")
+            logger.info(
+                f"Connected: {resolve.GetProductName()} {resolve.GetVersionString()}"
+            )
         return resolve
     except Exception as e:
         logger.error(f"Connection error: {e}")
         resolve = None
         return None
+
 
 def _launch_resolve():
     """Launch DaVinci Resolve and wait for it to become available."""
@@ -134,10 +140,11 @@ def _launch_resolve():
     for i in range(30):
         time.sleep(2)
         if _try_connect():
-            logger.info(f"Resolve responded after {(i+1)*2}s")
+            logger.info(f"Resolve responded after {(i + 1) * 2}s")
             return True
     logger.warning("Resolve did not respond within 60s after launch")
     return False
+
 
 def get_resolve():
     """Lazy connection to Resolve — connects on first tool call, auto-launches if needed."""
@@ -152,7 +159,9 @@ def get_resolve():
     _launch_resolve()
     return resolve
 
+
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _resolve_safe_dir(path):
     """Redirect sandbox/temp paths that Resolve can't access to ~/Desktop/resolve-stills.
@@ -169,7 +178,9 @@ def _resolve_safe_dir(path):
     elif platform.system() == "Windows":
         # Check if path is under the system temp directory (e.g. AppData\Local\Temp)
         try:
-            _is_sandbox = os.path.commonpath([os.path.abspath(path), os.path.abspath(system_temp)]) == os.path.abspath(system_temp)
+            _is_sandbox = os.path.commonpath(
+                [os.path.abspath(path), os.path.abspath(system_temp)]
+            ) == os.path.abspath(system_temp)
         except ValueError:
             # Different drives on Windows
             _is_sandbox = False
@@ -177,11 +188,14 @@ def _resolve_safe_dir(path):
         return os.path.join(os.path.expanduser("~"), "Documents", "resolve-stills")
     return path
 
+
 def _err(msg):
     return {"error": msg}
 
+
 def _ok(**kw):
     return {"success": True, **kw}
+
 
 def _check():
     resolve = get_resolve()
@@ -193,6 +207,7 @@ def _check():
         return pm, None, _err("No project open")
     return pm, proj, None
 
+
 def _get_mp():
     pm, proj, err = _check()
     if err:
@@ -201,6 +216,7 @@ def _get_mp():
     if not mp:
         return pm, proj, None, _err("Failed to get MediaPool")
     return pm, proj, mp, None
+
 
 def _get_tl():
     pm, proj, err = _check()
@@ -211,6 +227,7 @@ def _get_tl():
         return proj, None, _err("No current timeline")
     return proj, tl, None
 
+
 def _get_item(p):
     proj, tl, err = _get_tl()
     if err:
@@ -220,18 +237,24 @@ def _get_item(p):
     item_index = p.get("item_index", 0)
     items = tl.GetItemListInTrack(track_type, track_index)
     if not items or item_index >= len(items):
-        return tl, None, _err(f"No item at index {item_index} on {track_type} track {track_index}")
+        return (
+            tl,
+            None,
+            _err(f"No item at index {item_index} on {track_type} track {track_index}"),
+        )
     return tl, items[item_index], None
 
+
 def _find_clip(folder, clip_id):
-    for clip in (folder.GetClipList() or []):
+    for clip in folder.GetClipList() or []:
         if clip.GetUniqueId() == clip_id:
             return clip
-    for sub in (folder.GetSubFolderList() or []):
+    for sub in folder.GetSubFolderList() or []:
         found = _find_clip(sub, clip_id)
         if found:
             return found
     return None
+
 
 def _navigate_folder(mp, path):
     root = mp.GetRootFolder()
@@ -243,7 +266,7 @@ def _navigate_folder(mp, path):
     current = root
     for part in parts:
         found = False
-        for sub in (current.GetSubFolderList() or []):
+        for sub in current.GetSubFolderList() or []:
             if sub.GetName() == part:
                 current = sub
                 found = True
@@ -251,6 +274,7 @@ def _navigate_folder(mp, path):
         if not found:
             return None
     return current
+
 
 def _ser(obj):
     """Serialize Resolve API objects to JSON-safe values."""
@@ -265,6 +289,7 @@ def _ser(obj):
     # Resolve API object — return repr
     return str(obj)
 
+
 def _unknown(action, valid):
     return _err(f"Unknown action '{action}'. Valid actions: {', '.join(valid)}")
 
@@ -273,8 +298,11 @@ def _unknown(action, valid):
 # TOOL 1: resolve
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @mcp.tool()
-def resolve_control(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def resolve_control(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """App-level DaVinci Resolve operations.
 
     Actions:
@@ -293,34 +321,284 @@ def resolve_control(action: str, params: Optional[Dict[str, Any]] = None) -> Dic
         r = get_resolve()  # auto-launches if not running
         if r is not None:
             return _ok(message="DaVinci Resolve is running and connected.")
-        return _err("Could not connect to DaVinci Resolve. Check that Resolve Studio is installed and 'External scripting using' is set to Local in Preferences.")
+        return _err(
+            "Could not connect to DaVinci Resolve. Check that Resolve Studio is installed and 'External scripting using' is set to Local in Preferences."
+        )
 
     r = get_resolve()  # auto-launches if not running
     if r is None:
-        return _err("Could not connect to DaVinci Resolve after auto-launch attempt. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve after auto-launch attempt. Check that Resolve Studio is installed."
+        )
 
     if action == "get_version":
-        return {"product": r.GetProductName(), "version": r.GetVersion(), "version_string": r.GetVersionString()}
+        return {
+            "product": r.GetProductName(),
+            "version": r.GetVersion(),
+            "version_string": r.GetVersionString(),
+        }
     elif action == "get_page":
         return {"page": r.GetCurrentPage()}
     elif action == "open_page":
         return {"success": bool(r.OpenPage(p["page"]))}
     elif action == "get_keyframe_mode":
-        return {"mode": r.GetKeyframeMode()}
+        mode = r.GetKeyframeMode()
+        mode_names = {0: "Linear", 1: "Bezier", 2: "Constant"}
+        return {
+            "mode": mode,
+            "mode_name": mode_names.get(mode, "Unknown") if mode is not None else None,
+            "note": "None means default project keyframe mode",
+        }
     elif action == "set_keyframe_mode":
         return {"success": bool(r.SetKeyframeMode(p["mode"]))}
     elif action == "quit":
         r.Quit()
         return _ok()
-    return _unknown(action, ["launch","get_version","get_page","open_page","get_keyframe_mode","set_keyframe_mode","quit"])
+    return _unknown(
+        action,
+        [
+            "launch",
+            "get_version",
+            "get_page",
+            "open_page",
+            "get_keyframe_mode",
+            "set_keyframe_mode",
+            "quit",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 2: layout_presets
+# TOOL 2: resolve_constants
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def layout_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def resolve_constants(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Expose API constants from the DaVinci Resolve Scripting API.
+
+    Actions:
+      list_categories() -> {categories}  — returns all category names
+      get(category) -> {category, constants}  — returns constants for a specific category
+      all() -> {categories}  — returns ALL constants organized by category
+    """
+    p = params or {}
+
+    all_constants = {
+        "composite_modes": [
+            "Normal",
+            "Add",
+            "Subtract",
+            "Multiply",
+            "Screen",
+            "Overlay",
+            "Darken",
+            "Lighten",
+            "ColorDodge",
+            "ColorBurn",
+            "HardLight",
+            "SoftLight",
+            "Difference",
+            "Exclusion",
+            "Contrast",
+            "Hue",
+            "Saturation",
+            "Color",
+            "Luminosity",
+            "Tile",
+            "Behind",
+            "Stencil",
+            "OverlayStar",
+            "Maximum",
+        ],
+        "retime_processes": [
+            "Nearest",
+            "FrameBlend",
+            "FrameBlend Optical Flow",
+            "Optical Flow",
+        ],
+        "motion_estimation_modes": [
+            "0=Medium",
+            "1=Speed",
+            "2=Quality",
+            "3=Zero Latency",
+            "4=Bidirectional",
+            "5=Super High Quality",
+            "6=User",
+        ],
+        "scaling_options": [
+            "LockAspectRatio",
+            "Fit",
+            "Fill",
+            "Stretch",
+            "Crop",
+        ],
+        "resize_filter_types": [
+            "Nearest",
+            "Box",
+            "Bilinear",
+            "Bicubic",
+            "B-spline",
+            "Lanczos",
+            "Gauss",
+            "Standard",
+            "Bell",
+            "Mitchell",
+            "CubicSharp",
+            "CubicSmooth",
+            "CubicSharp2",
+            "Disc",
+            "Sinc",
+            "Spline",
+        ],
+        "dynamic_zoom_ease": [
+            "Linear",
+            "EaseIn",
+            "EaseOut",
+            "EaseInOut",
+        ],
+        "export_lut_types": [
+            "Cubicle",
+            "Flbox",
+            "V ldap",
+            ".3dl",
+        ],
+        "export_types": [
+            "AAF",
+            "EDL",
+            "FinalCut XML 7",
+            "FinalCut XML 10",
+            "Copy",
+            "Move",
+            "BWF",
+            "Audio Only",
+            "Video Only",
+            "Auto",
+            "Audio in Video",
+            "CMX 3600",
+            "Dictan",
+            "Digies",
+            "OMFI",
+            "Text",
+        ],
+        "export_subtypes": [
+            "None",
+            "XML",
+            "Copy",
+            "Move",
+            "BRAW",
+            "R3D",
+        ],
+        "audio_sync_settings": [
+            "Off",
+            "SceneDetect",
+            "Timecode",
+            "ClipChannel",
+        ],
+        "auto_caption_models": [
+            "Whisper",
+        ],
+        "cache_settings": [
+            "Auto",
+            "On",
+            "Off",
+        ],
+        "keyframe_mode": [
+            "Linear=0",
+            "Bezier=1",
+            "Constant=2",
+        ],
+        "render_quality": [
+            "Best",
+            "Better",
+            "Good",
+            "Full",
+            "Half",
+            "Quarter",
+            "Eighth",
+            "Sixteenth",
+            "Smooth",
+            "Draft",
+        ],
+        "timeline_properties": [
+            "Pan",
+            "Tilt",
+            "ZoomX",
+            "ZoomY",
+            "ZoomGang",
+            "RotationAngle",
+            "AnchorPointX",
+            "AnchorPointY",
+            "Pitch",
+            "Yaw",
+            "FlipX",
+            "FlipY",
+            "CropLeft",
+            "CropRight",
+            "CropTop",
+            "CropBottom",
+            "CropSoftness",
+            "CropRetain",
+            "DynamicZoomEase",
+            "CompositeMode",
+            "Opacity",
+            "Distortion",
+            "RetimeProcess",
+            "MotionEstimation",
+            "Scaling",
+            "ResizeFilter",
+        ],
+        "color_group_return_types": [
+            "PreColorGroup",
+            "PostColorGroup",
+        ],
+        "node_cache_settings": [
+            "Auto",
+            "On",
+            "Off",
+        ],
+        "fusion_cache_settings": [
+            "Auto",
+            "On",
+            "Off",
+        ],
+        "timeline_insert_ghost_clips": [
+            "True",
+            "False",
+        ],
+        "import_destinations": [
+            "Immediate",
+            "Root",
+            "SubFolder",
+        ],
+    }
+
+    if action == "list_categories":
+        return {"categories": list(all_constants.keys())}
+    elif action == "get":
+        cat = p.get("category", "")
+        if cat not in all_constants:
+            return _err(
+                f"Unknown category: {cat}. Use list_categories to see available."
+            )
+        return {"category": cat, "constants": all_constants[cat]}
+    elif action == "all":
+        return {"categories": all_constants}
+    else:
+        return _unknown(action, ["list_categories", "get", "all"])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TOOL 3: layout_presets
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@mcp.tool()
+def layout_presets(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Manage DaVinci Resolve UI layout presets.
 
     Actions:
@@ -334,7 +612,9 @@ def layout_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
+        )
 
     if action == "save":
         return {"success": bool(r.SaveLayoutPreset(p["name"]))}
@@ -350,15 +630,20 @@ def layout_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
         return {"success": bool(r.ImportLayoutPreset(p["path"]))}
     elif action == "delete":
         return {"success": bool(r.DeleteLayoutPreset(p["name"]))}
-    return _unknown(action, ["save","load","update","export","import_preset","delete"])
+    return _unknown(
+        action, ["save", "load", "update", "export", "import_preset", "delete"]
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 3: render_presets
+# TOOL 4: render_presets
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def render_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def render_presets(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Import/export render and burn-in presets.
 
     Actions:
@@ -370,7 +655,9 @@ def render_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
+        )
 
     if action == "import_render":
         return {"success": bool(r.ImportRenderPreset(p["path"]))}
@@ -380,15 +667,20 @@ def render_presets(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
         return {"success": bool(r.ImportBurnInPreset(p["path"]))}
     elif action == "export_burnin":
         return {"success": bool(r.ExportBurnInPreset(p["name"], p["path"]))}
-    return _unknown(action, ["import_render","export_render","import_burnin","export_burnin"])
+    return _unknown(
+        action, ["import_render", "export_render", "import_burnin", "export_burnin"]
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 4: project_manager
+# TOOL 5: project_manager
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def project_manager(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def project_manager(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Manage DaVinci Resolve projects.
 
     Actions:
@@ -407,17 +699,27 @@ def project_manager(action: str, params: Optional[Dict[str, Any]] = None) -> Dic
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
+        )
     pm = r.GetProjectManager()
 
     if action == "list":
         return {"projects": pm.GetProjectListInCurrentFolder()}
     elif action == "get_current":
         proj = pm.GetCurrentProject()
-        return {"name": proj.GetName(), "id": proj.GetUniqueId()} if proj else _err("No project open")
+        return (
+            {"name": proj.GetName(), "id": proj.GetUniqueId()}
+            if proj
+            else _err("No project open")
+        )
     elif action == "create":
         proj = pm.CreateProject(p["name"])
-        return _ok(name=proj.GetName()) if proj else _err(f"Failed to create '{p['name']}'")
+        return (
+            _ok(name=proj.GetName())
+            if proj
+            else _err(f"Failed to create '{p['name']}'")
+        )
     elif action == "load":
         proj = pm.LoadProject(p["name"])
         return _ok() if proj else _err(f"Failed to load '{p['name']}'")
@@ -425,27 +727,64 @@ def project_manager(action: str, params: Optional[Dict[str, Any]] = None) -> Dic
         return {"success": bool(pm.SaveProject())}
     elif action == "close":
         proj = pm.GetCurrentProject()
-        return {"success": bool(pm.CloseProject(proj))} if proj else _err("No project open")
+        return (
+            {"success": bool(pm.CloseProject(proj))}
+            if proj
+            else _err("No project open")
+        )
     elif action == "delete":
         return {"success": bool(pm.DeleteProject(p["name"]))}
     elif action == "import_project":
         return {"success": bool(pm.ImportProject(p["path"], p.get("name")))}
     elif action == "export_project":
-        return {"success": bool(pm.ExportProject(p["name"], p["path"], p.get("with_stills_and_luts", True)))}
+        return {
+            "success": bool(
+                pm.ExportProject(
+                    p["name"], p["path"], p.get("with_stills_and_luts", True)
+                )
+            )
+        }
     elif action == "archive":
-        return {"success": bool(pm.ArchiveProject(p["name"], p["path"],
-            p.get("src_media", True), p.get("render_cache", True), p.get("proxy_media", False)))}
+        return {
+            "success": bool(
+                pm.ArchiveProject(
+                    p["name"],
+                    p["path"],
+                    p.get("src_media", True),
+                    p.get("render_cache", True),
+                    p.get("proxy_media", False),
+                )
+            )
+        }
     elif action == "restore":
         return {"success": bool(pm.RestoreProject(p["path"], p.get("name")))}
-    return _unknown(action, ["list","get_current","create","load","save","close","delete","import_project","export_project","archive","restore"])
+    return _unknown(
+        action,
+        [
+            "list",
+            "get_current",
+            "create",
+            "load",
+            "save",
+            "close",
+            "delete",
+            "import_project",
+            "export_project",
+            "archive",
+            "restore",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 5: project_manager_folders
+# TOOL 6: project_manager_folders
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def project_manager_folders(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def project_manager_folders(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Navigate and manage project folders in the Project Manager.
 
     Actions:
@@ -460,7 +799,9 @@ def project_manager_folders(action: str, params: Optional[Dict[str, Any]] = None
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
+        )
     pm = r.GetProjectManager()
 
     if action == "list":
@@ -477,15 +818,21 @@ def project_manager_folders(action: str, params: Optional[Dict[str, Any]] = None
         return {"success": bool(pm.GotoRootFolder())}
     elif action == "goto_parent":
         return {"success": bool(pm.GotoParentFolder())}
-    return _unknown(action, ["list","get_current","create","delete","open","goto_root","goto_parent"])
+    return _unknown(
+        action,
+        ["list", "get_current", "create", "delete", "open", "goto_root", "goto_parent"],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 6: project_manager_cloud
+# TOOL 7: project_manager_cloud
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def project_manager_cloud(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def project_manager_cloud(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Cloud project operations (requires DaVinci Resolve cloud infrastructure).
 
     Actions:
@@ -497,28 +844,39 @@ def project_manager_cloud(action: str, params: Optional[Dict[str, Any]] = None) 
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
+        )
     pm = r.GetProjectManager()
 
     if action == "create":
         proj = pm.CreateCloudProject(p["settings"])
-        return _ok(name=proj.GetName()) if proj else _err("Failed to create cloud project")
+        return (
+            _ok(name=proj.GetName()) if proj else _err("Failed to create cloud project")
+        )
     elif action == "load":
         proj = pm.LoadCloudProject(p["settings"])
-        return _ok(name=proj.GetName()) if proj else _err("Failed to load cloud project")
+        return (
+            _ok(name=proj.GetName()) if proj else _err("Failed to load cloud project")
+        )
     elif action == "import_project":
         return {"success": bool(pm.ImportCloudProject(p["path"], p["settings"]))}
     elif action == "restore":
-        return {"success": bool(pm.RestoreCloudProject(p["folder_path"], p["settings"]))}
-    return _unknown(action, ["create","load","import_project","restore"])
+        return {
+            "success": bool(pm.RestoreCloudProject(p["folder_path"], p["settings"]))
+        }
+    return _unknown(action, ["create", "load", "import_project", "restore"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 7: project_manager_database
+# TOOL 8: project_manager_database
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def project_manager_database(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def project_manager_database(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Manage DaVinci Resolve project databases.
 
     Actions:
@@ -529,7 +887,9 @@ def project_manager_database(action: str, params: Optional[Dict[str, Any]] = Non
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
+        )
     pm = r.GetProjectManager()
 
     if action == "get_current":
@@ -538,15 +898,18 @@ def project_manager_database(action: str, params: Optional[Dict[str, Any]] = Non
         return {"databases": pm.GetDatabaseList()}
     elif action == "set_current":
         return {"success": bool(pm.SetCurrentDatabase(p["db_info"]))}
-    return _unknown(action, ["get_current","list","set_current"])
+    return _unknown(action, ["get_current", "list", "set_current"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 8: project_settings
+# TOOL 9: project_settings
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def project_settings(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def project_settings(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Project metadata, settings, and color groups.
 
     Actions:
@@ -595,8 +958,13 @@ def project_settings(action: str, params: Optional[Dict[str, Any]] = None) -> Di
     elif action == "load_burnin_preset":
         return {"success": bool(proj.LoadBurnInPreset(p["name"]))}
     elif action == "insert_audio":
-        return {"success": bool(proj.InsertAudioToCurrentTrackAtPlayhead(
-            p["media_path"], p.get("start_offset", 0), p.get("duration", 0)))}
+        return {
+            "success": bool(
+                proj.InsertAudioToCurrentTrackAtPlayhead(
+                    p["media_path"], p.get("start_offset", 0), p.get("duration", 0)
+                )
+            )
+        }
     elif action == "get_color_groups":
         groups = proj.GetColorGroupsList()
         return {"groups": [{"name": g.GetName()} for g in (groups or [])]}
@@ -609,12 +977,32 @@ def project_settings(action: str, params: Optional[Dict[str, Any]] = None) -> Di
             if g.GetName() == p["name"]:
                 return {"success": bool(proj.DeleteColorGroup(g))}
         return _err(f"Color group '{p['name']}' not found")
-    return _unknown(action, ["get_name","set_name","get_setting","set_setting","get_unique_id","get_presets","set_preset","refresh_luts","get_gallery","export_frame_as_still","load_burnin_preset","insert_audio","get_color_groups","add_color_group","delete_color_group"])
+    return _unknown(
+        action,
+        [
+            "get_name",
+            "set_name",
+            "get_setting",
+            "set_setting",
+            "get_unique_id",
+            "get_presets",
+            "set_preset",
+            "refresh_luts",
+            "get_gallery",
+            "export_frame_as_still",
+            "load_burnin_preset",
+            "insert_audio",
+            "get_color_groups",
+            "add_color_group",
+            "delete_color_group",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 9: render
+# TOOL 10: render
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -675,11 +1063,24 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
     elif action == "get_formats":
         return {"formats": _ser(proj.GetRenderFormats())}
     elif action == "get_codecs":
-        return {"codecs": _ser(proj.GetRenderCodecs(p["format"]))}
+        codecs = proj.GetRenderCodecs(p["format"])
+        if not codecs:
+            # Fallback: try each format name to find one with codecs
+            formats = proj.GetRenderFormats()
+            for fmt in formats:
+                c = proj.GetRenderCodecs(fmt)
+                if c:
+                    codecs = c
+                    break
+        return {"codecs": _ser(codecs)}
     elif action == "get_format_and_codec":
         return _ser(proj.GetCurrentRenderFormatAndCodec())
     elif action == "set_format_and_codec":
-        return {"success": bool(proj.SetCurrentRenderFormatAndCodec(p["format"], p["codec"]))}
+        return {
+            "success": bool(
+                proj.SetCurrentRenderFormatAndCodec(p["format"], p["codec"])
+            )
+        }
     elif action == "get_mode":
         return {"mode": proj.GetCurrentRenderMode()}
     elif action == "set_mode":
@@ -700,15 +1101,44 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
         return {"presets": proj.GetQuickExportRenderPresets()}
     elif action == "quick_export":
         return _ser(proj.RenderWithQuickExport(p["preset"], p.get("params", {})))
-    return _unknown(action, ["add_job","delete_job","delete_all_jobs","list_jobs","get_job_status","start","stop","is_rendering","get_formats","get_codecs","get_format_and_codec","set_format_and_codec","get_mode","set_mode","get_resolutions","set_settings","list_presets","load_preset","save_preset","delete_preset","quick_export_presets","quick_export"])
+    return _unknown(
+        action,
+        [
+            "add_job",
+            "delete_job",
+            "delete_all_jobs",
+            "list_jobs",
+            "get_job_status",
+            "start",
+            "stop",
+            "is_rendering",
+            "get_formats",
+            "get_codecs",
+            "get_format_and_codec",
+            "set_format_and_codec",
+            "get_mode",
+            "set_mode",
+            "get_resolutions",
+            "set_settings",
+            "list_presets",
+            "load_preset",
+            "save_preset",
+            "delete_preset",
+            "quick_export_presets",
+            "quick_export",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 10: media_storage
+# TOOL 11: media_storage
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def media_storage(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def media_storage(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Browse storage volumes and import media into the Media Pool.
 
     Actions:
@@ -723,7 +1153,9 @@ def media_storage(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
     p = params or {}
     r = get_resolve()
     if r is None:
-        return _err("Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed.")
+        return _err(
+            "Could not connect to DaVinci Resolve. It was not running and auto-launch failed. Check that Resolve Studio is installed."
+        )
     ms = r.GetMediaStorage()
 
     if action == "get_volumes":
@@ -749,12 +1181,24 @@ def media_storage(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
     elif action == "add_timeline_mattes":
         result = ms.AddTimelineMattesToMediaPool(p["paths"])
         return {"items": len(result) if result else 0}
-    return _unknown(action, ["get_volumes","get_subfolders","get_files","reveal","import_to_pool","add_clip_mattes","add_timeline_mattes"])
+    return _unknown(
+        action,
+        [
+            "get_volumes",
+            "get_subfolders",
+            "get_files",
+            "reveal",
+            "import_to_pool",
+            "add_clip_mattes",
+            "add_timeline_mattes",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 11: media_pool
+# TOOL 12: media_pool
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -799,7 +1243,11 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         return {"name": root.GetName(), "id": root.GetUniqueId()}
     elif action == "get_current_folder":
         f = mp.GetCurrentFolder()
-        return {"name": f.GetName(), "id": f.GetUniqueId()} if f else _err("No current folder")
+        return (
+            {"name": f.GetName(), "id": f.GetUniqueId()}
+            if f
+            else _err("No current folder")
+        )
     elif action == "set_current_folder":
         f = _navigate_folder(mp, p.get("path", ""))
         if not f:
@@ -808,22 +1256,30 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
     elif action == "add_subfolder":
         parent = _navigate_folder(mp, p.get("parent_path", "")) or mp.GetCurrentFolder()
         f = mp.AddSubFolder(parent, p["name"])
-        return _ok(name=f.GetName(), id=f.GetUniqueId()) if f else _err("Failed to create subfolder")
+        return (
+            _ok(name=f.GetName(), id=f.GetUniqueId())
+            if f
+            else _err("Failed to create subfolder")
+        )
     elif action == "delete_folders":
         folders = []
         for fid in p["folder_ids"]:
             # Search for folder by ID (simplified - searches root subfolders)
-            for sub in (root.GetSubFolderList() or []):
+            for sub in root.GetSubFolderList() or []:
                 if sub.GetUniqueId() == fid:
                     folders.append(sub)
-        return {"success": bool(mp.DeleteFolders(folders))} if folders else _err("No folders found")
+        return (
+            {"success": bool(mp.DeleteFolders(folders))}
+            if folders
+            else _err("No folders found")
+        )
     elif action == "move_folders":
         target = _navigate_folder(mp, p["target_path"])
         if not target:
             return _err(f"Target folder not found: {p['target_path']}")
         folders = []
         for fid in p["folder_ids"]:
-            for sub in (root.GetSubFolderList() or []):
+            for sub in root.GetSubFolderList() or []:
                 if sub.GetUniqueId() == fid:
                     folders.append(sub)
         return {"success": bool(mp.MoveFolders(folders, target))}
@@ -831,14 +1287,27 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         return {"success": bool(mp.RefreshFolders())}
     elif action == "create_timeline":
         tl = mp.CreateEmptyTimeline(p["name"])
-        return _ok(name=tl.GetName(), id=tl.GetUniqueId()) if tl else _err("Failed to create timeline")
+        return (
+            _ok(name=tl.GetName(), id=tl.GetUniqueId())
+            if tl
+            else _err("Failed to create timeline")
+        )
     elif action == "create_timeline_from_clips":
-        clips = [_find_clip(root, cid) for cid in p["clip_ids"]]
-        clips = [c for c in clips if c]
+        clip_infos = p.get("clip_infos", [])
+        clip_ids = p.get("clip_ids", [])
+        if clip_infos:
+            clips = clip_infos
+        else:
+            clips = [_find_clip(root, cid) for cid in clip_ids]
+            clips = [c for c in clips if c]
         if not clips:
             return _err("No valid clips found")
         tl = mp.CreateTimelineFromClips(p["name"], clips)
-        return _ok(name=tl.GetName(), id=tl.GetUniqueId()) if tl else _err("Failed to create timeline")
+        return (
+            _ok(name=tl.GetName(), id=tl.GetUniqueId())
+            if tl
+            else _err("Failed to create timeline")
+        )
     elif action == "import_timeline":
         tl = mp.ImportTimelineFromFile(p["path"], p.get("options", {}))
         return _ok(name=tl.GetName()) if tl else _err("Failed to import timeline")
@@ -849,19 +1318,38 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
             tl = proj.GetTimelineByIndex(i)
             if tl and tl.GetUniqueId() in p["timeline_ids"]:
                 timelines.append(tl)
-        return {"success": bool(mp.DeleteTimelines(timelines))} if timelines else _err("No timelines found")
+        return (
+            {"success": bool(mp.DeleteTimelines(timelines))}
+            if timelines
+            else _err("No timelines found")
+        )
     elif action == "append_to_timeline":
-        clips = [_find_clip(root, cid) for cid in p["clip_ids"]]
-        clips = [c for c in clips if c]
-        result = mp.AppendToTimeline(clips)
+        clip_infos = p.get("clip_infos", [])
+        clip_ids = p.get("clip_ids", [])
+        if clip_infos:
+            # Use clip_infos dict format for advanced control
+            result = mp.AppendToTimeline(clip_infos)
+        else:
+            clips = [_find_clip(root, cid) for cid in clip_ids]
+            clips = [c for c in clips if c]
+            result = mp.AppendToTimeline(clips)
         return _ok(count=len(result) if result else 0)
     elif action == "import_media":
-        result = mp.ImportMedia(p["paths"])
+        paths = p.get("paths", [])
+        clip_infos = p.get("clip_infos", [])
+        if clip_infos:
+            result = mp.ImportMedia(clip_infos)
+        else:
+            result = mp.ImportMedia(paths)
         return {"imported": len(result) if result else 0}
     elif action == "delete_clips":
         clips = [_find_clip(root, cid) for cid in p["clip_ids"]]
         clips = [c for c in clips if c]
-        return {"success": bool(mp.DeleteClips(clips))} if clips else _err("No clips found")
+        return (
+            {"success": bool(mp.DeleteClips(clips))}
+            if clips
+            else _err("No clips found")
+        )
     elif action == "move_clips":
         target = _navigate_folder(mp, p["target_path"])
         if not target:
@@ -892,7 +1380,11 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         if not left or not right:
             return _err("Left or right clip not found")
         result = mp.CreateStereoClip(left, right)
-        return _ok(name=result.GetName()) if result else _err("Failed to create stereo clip")
+        return (
+            _ok(name=result.GetName())
+            if result
+            else _err("Failed to create stereo clip")
+        )
     elif action == "auto_sync_audio":
         clips = [_find_clip(root, cid) for cid in p["clip_ids"]]
         clips = [c for c in clips if c]
@@ -904,7 +1396,11 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
         return {"clips": [{"name": c.GetName(), "id": c.GetUniqueId()} for c in sel]}
     elif action == "set_selected":
         clip = _find_clip(root, p["clip_id"])
-        return {"success": bool(mp.SetSelectedClip(clip))} if clip else _err("Clip not found")
+        return (
+            {"success": bool(mp.SetSelectedClip(clip))}
+            if clip
+            else _err("Clip not found")
+        )
     elif action == "get_clip_mattes":
         clip = _find_clip(root, p["clip_id"])
         return {"mattes": mp.GetClipMatteList(clip)} if clip else _err("Clip not found")
@@ -918,13 +1414,49 @@ def media_pool(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str
             return _err("Clip not found")
         return {"success": bool(mp.DeleteClipMattes(clip, p["paths"]))}
     elif action == "import_folder":
-        return {"success": bool(mp.ImportFolderFromFile(p["path"], p.get("source_clips_path", "")))}
-    return _unknown(action, ["get_root_folder","get_current_folder","set_current_folder","add_subfolder","delete_folders","move_folders","refresh","create_timeline","create_timeline_from_clips","import_timeline","delete_timelines","append_to_timeline","import_media","delete_clips","move_clips","relink","unlink","export_metadata","get_unique_id","create_stereo_clip","auto_sync_audio","get_selected","set_selected","get_clip_mattes","get_timeline_mattes","delete_clip_mattes","import_folder"])
+        return {
+            "success": bool(
+                mp.ImportFolderFromFile(p["path"], p.get("source_clips_path", ""))
+            )
+        }
+    return _unknown(
+        action,
+        [
+            "get_root_folder",
+            "get_current_folder",
+            "set_current_folder",
+            "add_subfolder",
+            "delete_folders",
+            "move_folders",
+            "refresh",
+            "create_timeline",
+            "create_timeline_from_clips",
+            "import_timeline",
+            "delete_timelines",
+            "append_to_timeline",
+            "import_media",
+            "delete_clips",
+            "move_clips",
+            "relink",
+            "unlink",
+            "export_metadata",
+            "get_unique_id",
+            "create_stereo_clip",
+            "auto_sync_audio",
+            "get_selected",
+            "set_selected",
+            "get_clip_mattes",
+            "get_timeline_mattes",
+            "delete_clip_mattes",
+            "import_folder",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 12: folder
+# TOOL 13: folder
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def folder(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -957,7 +1489,9 @@ def folder(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
         return {"name": f.GetName()}
     elif action == "get_subfolders":
         subs = f.GetSubFolderList() or []
-        return {"subfolders": [{"name": s.GetName(), "id": s.GetUniqueId()} for s in subs]}
+        return {
+            "subfolders": [{"name": s.GetName(), "id": s.GetUniqueId()} for s in subs]
+        }
     elif action == "is_stale":
         return {"stale": bool(f.GetIsFolderStale())}
     elif action == "get_unique_id":
@@ -968,15 +1502,30 @@ def folder(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
         return {"success": bool(f.TranscribeAudio())}
     elif action == "clear_transcription":
         return {"success": bool(f.ClearTranscription())}
-    return _unknown(action, ["get_clips","get_name","get_subfolders","is_stale","get_unique_id","export","transcribe_audio","clear_transcription"])
+    return _unknown(
+        action,
+        [
+            "get_clips",
+            "get_name",
+            "get_subfolders",
+            "is_stale",
+            "get_unique_id",
+            "export",
+            "transcribe_audio",
+            "clear_transcription",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 13: media_pool_item
+# TOOL 14: media_pool_item
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def media_pool_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def media_pool_item(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Operations on a media pool clip. Identify clip by clip_id.
 
     Actions:
@@ -1052,18 +1601,50 @@ def media_pool_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dic
     elif action == "get_mark_in_out":
         return _ser(clip.GetMarkInOut())
     elif action == "set_mark_in_out":
-        return {"success": bool(clip.SetMarkInOut(p["mark_in"], p["mark_out"], p.get("type", "all")))}
+        return {
+            "success": bool(
+                clip.SetMarkInOut(p["mark_in"], p["mark_out"], p.get("type", "all"))
+            )
+        }
     elif action == "clear_mark_in_out":
         return {"success": bool(clip.ClearMarkInOut(p.get("type", "all")))}
-    return _unknown(action, ["get_name","get_metadata","set_metadata","get_third_party_metadata","set_third_party_metadata","get_media_id","get_clip_property","set_clip_property","get_clip_color","set_clip_color","clear_clip_color","link_proxy","unlink_proxy","replace_clip","get_unique_id","transcribe_audio","clear_transcription","get_audio_mapping","get_mark_in_out","set_mark_in_out","clear_mark_in_out"])
+    return _unknown(
+        action,
+        [
+            "get_name",
+            "get_metadata",
+            "set_metadata",
+            "get_third_party_metadata",
+            "set_third_party_metadata",
+            "get_media_id",
+            "get_clip_property",
+            "set_clip_property",
+            "get_clip_color",
+            "set_clip_color",
+            "clear_clip_color",
+            "link_proxy",
+            "unlink_proxy",
+            "replace_clip",
+            "get_unique_id",
+            "transcribe_audio",
+            "clear_transcription",
+            "get_audio_mapping",
+            "get_mark_in_out",
+            "set_mark_in_out",
+            "clear_mark_in_out",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 14: media_pool_item_markers
+# TOOL 15: media_pool_item_markers
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def media_pool_item_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def media_pool_item_markers(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Markers and flags on media pool clips. Identify clip by clip_id.
 
     Actions:
@@ -1088,13 +1669,26 @@ def media_pool_item_markers(action: str, params: Optional[Dict[str, Any]] = None
         return _err(f"Clip not found: {p.get('clip_id')}")
 
     if action == "add":
-        return {"success": bool(clip.AddMarker(p["frame"], p["color"], p["name"], p["note"], p["duration"], p.get("custom_data", "")))}
+        return {
+            "success": bool(
+                clip.AddMarker(
+                    p["frame"],
+                    p["color"],
+                    p["name"],
+                    p["note"],
+                    p["duration"],
+                    p.get("custom_data", ""),
+                )
+            )
+        }
     elif action == "get_all":
         return {"markers": _ser(clip.GetMarkers())}
     elif action == "get_by_custom_data":
         return {"markers": _ser(clip.GetMarkerByCustomData(p["custom_data"]))}
     elif action == "update_custom_data":
-        return {"success": bool(clip.UpdateMarkerCustomData(p["frame"], p["custom_data"]))}
+        return {
+            "success": bool(clip.UpdateMarkerCustomData(p["frame"], p["custom_data"]))
+        }
     elif action == "get_custom_data":
         return {"data": clip.GetMarkerCustomData(p["frame"])}
     elif action == "delete_by_color":
@@ -1109,12 +1703,28 @@ def media_pool_item_markers(action: str, params: Optional[Dict[str, Any]] = None
         return {"flags": clip.GetFlagList()}
     elif action == "clear_flags":
         return {"success": bool(clip.ClearFlags(p["color"]))}
-    return _unknown(action, ["add","get_all","get_by_custom_data","update_custom_data","get_custom_data","delete_by_color","delete_at_frame","delete_by_custom_data","add_flag","get_flags","clear_flags"])
+    return _unknown(
+        action,
+        [
+            "add",
+            "get_all",
+            "get_by_custom_data",
+            "update_custom_data",
+            "get_custom_data",
+            "delete_by_color",
+            "delete_at_frame",
+            "delete_by_custom_data",
+            "add_flag",
+            "get_flags",
+            "clear_flags",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 15: timeline
+# TOOL 16: timeline
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -1176,11 +1786,17 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         for i in range(1, count + 1):
             tl = proj.GetTimelineByIndex(i)
             if tl:
-                timelines.append({"name": tl.GetName(), "id": tl.GetUniqueId(), "index": i})
+                timelines.append(
+                    {"name": tl.GetName(), "id": tl.GetUniqueId(), "index": i}
+                )
         return {"timelines": timelines}
     elif action == "set_current":
         tl = proj.GetTimelineByIndex(p["index"])
-        return {"success": bool(proj.SetCurrentTimeline(tl))} if tl else _err(f"No timeline at index {p['index']}")
+        return (
+            {"success": bool(proj.SetCurrentTimeline(tl))}
+            if tl
+            else _err(f"No timeline at index {p['index']}")
+        )
 
     # Remaining actions need current timeline
     tl = proj.GetCurrentTimeline()
@@ -1188,7 +1804,13 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         return _err("No current timeline")
 
     if action == "get_current":
-        return {"name": tl.GetName(), "id": tl.GetUniqueId(), "start_frame": tl.GetStartFrame(), "end_frame": tl.GetEndFrame(), "start_timecode": tl.GetStartTimecode()}
+        return {
+            "name": tl.GetName(),
+            "id": tl.GetUniqueId(),
+            "start_frame": tl.GetStartFrame(),
+            "end_frame": tl.GetEndFrame(),
+            "start_timecode": tl.GetStartTimecode(),
+        }
     elif action == "get_name":
         return {"name": tl.GetName()}
     elif action == "set_name":
@@ -1204,33 +1826,57 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
     elif action == "get_track_count":
         return {"count": tl.GetTrackCount(p["track_type"])}
     elif action == "add_track":
-        return {"success": bool(tl.AddTrack(p["track_type"], p.get("sub_type", "")))}
+        nto = p.get("new_track_options", {})
+        track = tl.AddTrack(p["track_type"], nto if nto else p.get("sub_type", ""))
+        return {
+            "success": bool(track),
+            "track_index": track.GetIndex() if track else None,
+        }
     elif action == "delete_track":
         return {"success": bool(tl.DeleteTrack(p["track_type"], p["index"]))}
     elif action == "get_track_sub_type":
         return {"sub_type": tl.GetTrackSubType(p["track_type"], p["index"])}
     elif action == "set_track_enable":
-        return {"success": bool(tl.SetTrackEnable(p["track_type"], p["index"], p["enabled"]))}
+        return {
+            "success": bool(
+                tl.SetTrackEnable(p["track_type"], p["index"], p["enabled"])
+            )
+        }
     elif action == "get_track_enabled":
         return {"enabled": bool(tl.GetIsTrackEnabled(p["track_type"], p["index"]))}
     elif action == "set_track_lock":
-        return {"success": bool(tl.SetTrackLock(p["track_type"], p["index"], p["locked"]))}
+        return {
+            "success": bool(tl.SetTrackLock(p["track_type"], p["index"], p["locked"]))
+        }
     elif action == "get_track_locked":
         return {"locked": bool(tl.GetIsTrackLocked(p["track_type"], p["index"]))}
     elif action == "get_track_name":
         return {"name": tl.GetTrackName(p["track_type"], p["index"])}
     elif action == "set_track_name":
-        return {"success": bool(tl.SetTrackName(p["track_type"], p["index"], p["name"]))}
+        return {
+            "success": bool(tl.SetTrackName(p["track_type"], p["index"], p["name"]))
+        }
     elif action == "get_items":
         items = tl.GetItemListInTrack(p["track_type"], p["index"])
-        return {"items": [{"name": it.GetName(), "id": it.GetUniqueId(), "start": it.GetStart(), "end": it.GetEnd(), "duration": it.GetDuration()} for it in (items or [])]}
+        return {
+            "items": [
+                {
+                    "name": it.GetName(),
+                    "id": it.GetUniqueId(),
+                    "start": it.GetStart(),
+                    "end": it.GetEnd(),
+                    "duration": it.GetDuration(),
+                }
+                for it in (items or [])
+            ]
+        }
     elif action == "delete_clips":
         # Find timeline items by unique IDs
         ids_set = set(p["clip_ids"])
         found = []
         for tt in ["video", "audio", "subtitle"]:
             for ti in range(1, tl.GetTrackCount(tt) + 1):
-                for it in (tl.GetItemListInTrack(tt, ti) or []):
+                for it in tl.GetItemListInTrack(tt, ti) or []:
                     if it.GetUniqueId() in ids_set:
                         found.append(it)
         return {"success": bool(tl.DeleteClips(found, p.get("ripple", False)))}
@@ -1239,7 +1885,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         found = []
         for tt in ["video", "audio"]:
             for ti in range(1, tl.GetTrackCount(tt) + 1):
-                for it in (tl.GetItemListInTrack(tt, ti) or []):
+                for it in tl.GetItemListInTrack(tt, ti) or []:
                     if it.GetUniqueId() in ids_set:
                         found.append(it)
         return {"success": bool(tl.SetClipsLinked(found, p["linked"]))}
@@ -1249,7 +1895,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
     elif action == "create_compound_clip":
         ids_set = set(p["clip_ids"])
         found = []
-        for it in (tl.GetItemListInTrack("video", 1) or []):
+        for it in tl.GetItemListInTrack("video", 1) or []:
             if it.GetUniqueId() in ids_set:
                 found.append(it)
         result = tl.CreateCompoundClip(found, p.get("info", {}))
@@ -1257,7 +1903,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
     elif action == "create_fusion_clip":
         ids_set = set(p["clip_ids"])
         found = []
-        for it in (tl.GetItemListInTrack("video", 1) or []):
+        for it in tl.GetItemListInTrack("video", 1) or []:
             if it.GetUniqueId() in ids_set:
                 found.append(it)
         result = tl.CreateFusionClip(found)
@@ -1295,24 +1941,81 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         return {"available": g is not None}
     elif action == "get_media_pool_item":
         mpi = tl.GetMediaPoolItem()
-        return {"name": mpi.GetName(), "id": mpi.GetUniqueId()} if mpi else {"name": None, "id": None}
+        return (
+            {"name": mpi.GetName(), "id": mpi.GetUniqueId()}
+            if mpi
+            else {"name": None, "id": None}
+        )
     elif action == "get_mark_in_out":
         return _ser(tl.GetMarkInOut())
     elif action == "set_mark_in_out":
-        return {"success": bool(tl.SetMarkInOut(p["mark_in"], p["mark_out"], p.get("type", "all")))}
+        return {
+            "success": bool(
+                tl.SetMarkInOut(p["mark_in"], p["mark_out"], p.get("type", "all"))
+            )
+        }
     elif action == "clear_mark_in_out":
         return {"success": bool(tl.ClearMarkInOut(p.get("type", "all")))}
     elif action == "convert_to_stereo":
         return {"success": bool(tl.ConvertTimelineToStereo())}
-    return _unknown(action, ["list","get_current","set_current","get_name","set_name","get_start_frame","get_end_frame","get_start_timecode","set_start_timecode","get_track_count","add_track","delete_track","get_track_sub_type","set_track_enable","get_track_enabled","set_track_lock","get_track_locked","get_track_name","set_track_name","get_items","delete_clips","set_clips_linked","duplicate","create_compound_clip","create_fusion_clip","import_into_timeline","export","get_setting","set_setting","insert_generator","insert_fusion_generator","insert_fusion_composition","insert_ofx_generator","insert_title","insert_fusion_title","get_unique_id","get_node_graph","get_media_pool_item","get_mark_in_out","set_mark_in_out","clear_mark_in_out","convert_to_stereo"])
+    return _unknown(
+        action,
+        [
+            "list",
+            "get_current",
+            "set_current",
+            "get_name",
+            "set_name",
+            "get_start_frame",
+            "get_end_frame",
+            "get_start_timecode",
+            "set_start_timecode",
+            "get_track_count",
+            "add_track",
+            "delete_track",
+            "get_track_sub_type",
+            "set_track_enable",
+            "get_track_enabled",
+            "set_track_lock",
+            "get_track_locked",
+            "get_track_name",
+            "set_track_name",
+            "get_items",
+            "delete_clips",
+            "set_clips_linked",
+            "duplicate",
+            "create_compound_clip",
+            "create_fusion_clip",
+            "import_into_timeline",
+            "export",
+            "get_setting",
+            "set_setting",
+            "insert_generator",
+            "insert_fusion_generator",
+            "insert_fusion_composition",
+            "insert_ofx_generator",
+            "insert_title",
+            "insert_fusion_title",
+            "get_unique_id",
+            "get_node_graph",
+            "get_media_pool_item",
+            "get_mark_in_out",
+            "set_mark_in_out",
+            "clear_mark_in_out",
+            "convert_to_stereo",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 16: timeline_markers
+# TOOL 17: timeline_markers
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def timeline_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def timeline_markers(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Markers and playhead operations on the current timeline.
 
     Actions:
@@ -1335,13 +2038,26 @@ def timeline_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Di
         return err
 
     if action == "add":
-        return {"success": bool(tl.AddMarker(p["frame"], p["color"], p["name"], p["note"], p["duration"], p.get("custom_data", "")))}
+        return {
+            "success": bool(
+                tl.AddMarker(
+                    p["frame"],
+                    p["color"],
+                    p["name"],
+                    p["note"],
+                    p["duration"],
+                    p.get("custom_data", ""),
+                )
+            )
+        }
     elif action == "get_all":
         return {"markers": _ser(tl.GetMarkers())}
     elif action == "get_by_custom_data":
         return {"markers": _ser(tl.GetMarkerByCustomData(p["custom_data"]))}
     elif action == "update_custom_data":
-        return {"success": bool(tl.UpdateMarkerCustomData(p["frame"], p["custom_data"]))}
+        return {
+            "success": bool(tl.UpdateMarkerCustomData(p["frame"], p["custom_data"]))
+        }
     elif action == "get_custom_data":
         return {"data": tl.GetMarkerCustomData(p["frame"])}
     elif action == "delete_by_color":
@@ -1356,15 +2072,36 @@ def timeline_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Di
         return {"success": bool(tl.SetCurrentTimecode(p["timecode"]))}
     elif action == "get_current_video_item":
         it = tl.GetCurrentVideoItem()
-        return {"name": it.GetName(), "id": it.GetUniqueId()} if it else {"name": None, "id": None}
+        return (
+            {"name": it.GetName(), "id": it.GetUniqueId()}
+            if it
+            else {"name": None, "id": None}
+        )
     elif action == "get_thumbnail":
         return _ser(tl.GetCurrentClipThumbnailImage())
-    return _unknown(action, ["add","get_all","get_by_custom_data","update_custom_data","get_custom_data","delete_by_color","delete_at_frame","delete_by_custom_data","get_current_timecode","set_current_timecode","get_current_video_item","get_thumbnail"])
+    return _unknown(
+        action,
+        [
+            "add",
+            "get_all",
+            "get_by_custom_data",
+            "update_custom_data",
+            "get_custom_data",
+            "delete_by_color",
+            "delete_at_frame",
+            "delete_by_custom_data",
+            "get_current_timecode",
+            "set_current_timecode",
+            "get_current_video_item",
+            "get_thumbnail",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 17: timeline_ai
+# TOOL 18: timeline_ai
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def timeline_ai(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -1392,7 +2129,7 @@ def timeline_ai(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         if clip_ids:
             for tt in ["video"]:
                 for ti in range(1, tl.GetTrackCount(tt) + 1):
-                    for it in (tl.GetItemListInTrack(tt, ti) or []):
+                    for it in tl.GetItemListInTrack(tt, ti) or []:
                         if it.GetUniqueId() in clip_ids:
                             items.append(it)
         analysis_type = p.get("analysis_type")
@@ -1403,15 +2140,27 @@ def timeline_ai(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
     elif action == "grab_all_stills":
         stills = tl.GrabAllStills(p.get("source", 1))
         return {"count": len(stills) if stills else 0}
-    return _unknown(action, ["create_subtitles","detect_scene_cuts","analyze_dolby_vision","grab_still","grab_all_stills"])
+    return _unknown(
+        action,
+        [
+            "create_subtitles",
+            "detect_scene_cuts",
+            "analyze_dolby_vision",
+            "grab_still",
+            "grab_all_stills",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 18: timeline_item
+# TOOL 19: timeline_item
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def timeline_item(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Properties, transforms, speed, keyframes, and metadata for a timeline item.
     Identify by track_type, track_index, item_index.
 
@@ -1465,8 +2214,51 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
 
     if action == "get_name":
         return {"name": item.GetName()}
+    elif action == "list_properties":
+        # The 26 valid TimelineItem property keys (from the Resolve Scripting API)
+        video_props = [
+            "Pan",
+            "Tilt",
+            "ZoomX",
+            "ZoomY",
+            "ZoomGang",
+            "RotationAngle",
+            "AnchorPointX",
+            "AnchorPointY",
+            "Pitch",
+            "Yaw",
+            "FlipX",
+            "FlipY",
+        ]
+        composite_props = ["CompositeMode", "Opacity", "Distortion"]
+        crop_props = [
+            "CropLeft",
+            "CropRight",
+            "CropTop",
+            "CropBottom",
+            "CropSoftness",
+            "CropRetain",
+        ]
+        retime_props = ["RetimeProcess", "MotionEstimation", "Scaling", "ResizeFilter"]
+        misc_props = ["DynamicZoomEase"]
+        return {
+            "properties": {
+                "video_transform": video_props,
+                "composite": composite_props,
+                "crop": crop_props,
+                "retime": retime_props,
+                "misc": misc_props,
+                "all": video_props
+                + composite_props
+                + crop_props
+                + retime_props
+                + misc_props,
+            },
+            "count": 26,
+            "note": "These 26 keys are valid for GetProperty(key) and SetProperty(key, value)",
+        }
     elif action == "get_property":
-        return {"properties": _ser(item.GetProperty(p.get("key", "")))}
+        return {"properties": _ser(item.GetProperty(p.get("key")))}
     elif action == "set_property":
         return {"success": bool(item.SetProperty(p["key"], p["value"]))}
     elif action == "get_duration":
@@ -1497,7 +2289,11 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
         return {"id": item.GetUniqueId()}
     elif action == "get_media_pool_item":
         mpi = item.GetMediaPoolItem()
-        return {"name": mpi.GetName(), "id": mpi.GetUniqueId()} if mpi else {"name": None, "id": None}
+        return (
+            {"name": mpi.GetName(), "id": mpi.GetUniqueId()}
+            if mpi
+            else {"name": None, "id": None}
+        )
     elif action == "get_stereo_convergence":
         return {"values": _ser(item.GetStereoConvergenceValues())}
     elif action == "get_stereo_left_window":
@@ -1506,10 +2302,16 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
         return {"params": _ser(item.GetStereoRightFloatingWindowParams())}
     elif action == "get_linked_items":
         linked = item.GetLinkedItems() or []
-        return {"items": [{"name": it.GetName(), "id": it.GetUniqueId()} for it in linked]}
+        return {
+            "items": [{"name": it.GetName(), "id": it.GetUniqueId()} for it in linked]
+        }
     elif action == "get_track_type_and_index":
         result = item.GetTrackTypeAndIndex()
-        return {"track_type": result[0], "track_index": result[1]} if result else _err("Failed")
+        return (
+            {"track_type": result[0], "track_index": result[1]}
+            if result
+            else _err("Failed")
+        )
     elif action == "get_source_audio_mapping":
         return {"mapping": item.GetSourceAudioChannelMapping()}
     elif action == "load_burnin_preset":
@@ -1517,84 +2319,222 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
 
     # ── Retime ──
     elif action == "get_retime":
-        return {"process": item.GetProperty("RetimeProcess"), "motion_estimation": item.GetProperty("MotionEstimation")}
+        return {
+            "process": item.GetProperty("RetimeProcess"),
+            "motion_estimation": item.GetProperty("MotionEstimation"),
+        }
     elif action == "set_retime":
-        # RetimeProcess: 0=project, 1=nearest, 2=frame_blend, 3=optical_flow
+        # RetimeProcess: 0=project, 1=Nearest, 2=FrameBlend, 3=Optical Flow (or FrameBlend Optical Flow)
         # MotionEstimation: 0=project, 1=standard_faster, 2=standard_better, 3=enhanced_faster, 4=enhanced_better, 5=speed_warp_better, 6=speed_warp_faster
-        process_map = {"project": 0, "nearest": 1, "frame_blend": 2, "optical_flow": 3}
+        valid_processes = {
+            "Nearest",
+            "FrameBlend",
+            "FrameBlend Optical Flow",
+            "Optical Flow",
+        }
+        process_map = {
+            "nearest": 1,
+            "frameblend": 2,
+            "frame blend optical flow": 3,
+            "optical flow": 3,
+            "opticalflow": 3,
+        }
         results = {}
         if "process" in p:
             val = p["process"]
             if isinstance(val, str):
-                val = process_map.get(val.lower())
-                if val is None:
-                    return _err(f"Invalid process. Use: {', '.join(process_map.keys())} or integer 0-3")
+                # Try exact match first
+                if val in valid_processes:
+                    val = process_map.get(
+                        val.lower().replace("-", " ").replace("_", " "), 1
+                    )
+                else:
+                    # Try normalized lookup
+                    normalized = val.lower().replace("-", " ").replace("_", " ")
+                    val = process_map.get(normalized)
+                    if val is None:
+                        return _err(
+                            f"Invalid process: {val}. Valid strings: {', '.join(sorted(valid_processes))} or integer 0-3"
+                        )
+            elif isinstance(val, int) and (val < 0 or val > 3):
+                return _err(f"Invalid process integer: {val}. Must be 0-3")
             results["process"] = bool(item.SetProperty("RetimeProcess", val))
         if "motion_estimation" in p:
-            results["motion_estimation"] = bool(item.SetProperty("MotionEstimation", p["motion_estimation"]))
-        return _ok(**results) if results else _err("Specify process (0-3 or name) and/or motion_estimation (0-6)")
+            me = p["motion_estimation"]
+            if isinstance(me, int) and (me < 0 or me > 6):
+                return _err(f"Invalid motion_estimation: {me}. Must be integer 0-6")
+            results["motion_estimation"] = bool(
+                item.SetProperty("MotionEstimation", me)
+            )
+        return (
+            _ok(**results)
+            if results
+            else _err("Specify process (0-3 or name) and/or motion_estimation (0-6)")
+        )
 
     # ── Transform ──
     elif action == "get_transform":
-        keys = ["Pan", "Tilt", "ZoomX", "ZoomY", "ZoomGang", "RotationAngle", "AnchorPointX", "AnchorPointY", "Pitch", "Yaw", "FlipX", "FlipY"]
+        keys = [
+            "Pan",
+            "Tilt",
+            "ZoomX",
+            "ZoomY",
+            "ZoomGang",
+            "RotationAngle",
+            "AnchorPointX",
+            "AnchorPointY",
+            "Pitch",
+            "Yaw",
+            "FlipX",
+            "FlipY",
+        ]
         return {k: item.GetProperty(k) for k in keys}
     elif action == "set_transform":
-        valid = {"Pan", "Tilt", "ZoomX", "ZoomY", "ZoomGang", "RotationAngle", "AnchorPointX", "AnchorPointY", "Pitch", "Yaw", "FlipX", "FlipY"}
+        valid = {
+            "Pan",
+            "Tilt",
+            "ZoomX",
+            "ZoomY",
+            "ZoomGang",
+            "RotationAngle",
+            "AnchorPointX",
+            "AnchorPointY",
+            "Pitch",
+            "Yaw",
+            "FlipX",
+            "FlipY",
+        }
         results = {}
         for k, v in p.items():
             if k in valid:
                 results[k] = bool(item.SetProperty(k, v))
-        return _ok(**results) if results else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
+        return (
+            _ok(**results)
+            if results
+            else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
+        )
 
     # ── Crop ──
     elif action == "get_crop":
-        keys = ["CropLeft", "CropRight", "CropTop", "CropBottom", "CropSoftness", "CropRetain"]
+        keys = [
+            "CropLeft",
+            "CropRight",
+            "CropTop",
+            "CropBottom",
+            "CropSoftness",
+            "CropRetain",
+        ]
         return {k: item.GetProperty(k) for k in keys}
     elif action == "set_crop":
-        valid = {"CropLeft", "CropRight", "CropTop", "CropBottom", "CropSoftness", "CropRetain"}
+        valid = {
+            "CropLeft",
+            "CropRight",
+            "CropTop",
+            "CropBottom",
+            "CropSoftness",
+            "CropRetain",
+        }
+        range_keys = {"CropLeft", "CropRight", "CropTop", "CropBottom", "CropSoftness"}
         results = {}
         for k, v in p.items():
             if k in valid:
+                if k == "CropRetain":
+                    if not isinstance(v, bool):
+                        return _err(
+                            f"CropRetain must be a boolean, got: {type(v).__name__}"
+                        )
+                elif k in range_keys:
+                    try:
+                        fv = float(v)
+                        if fv < 0.0 or fv > 1.0:
+                            return _err(f"{k} must be in range [0.0, 1.0], got: {v}")
+                    except (ValueError, TypeError):
+                        return _err(
+                            f"{k} must be a number in range [0.0, 1.0], got: {v}"
+                        )
                 results[k] = bool(item.SetProperty(k, v))
-        return _ok(**results) if results else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
+        return (
+            _ok(**results)
+            if results
+            else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
+        )
 
     # ── Composite ──
     elif action == "get_composite":
-        return {"Opacity": item.GetProperty("Opacity"), "CompositeMode": item.GetProperty("CompositeMode")}
+        return {
+            "Opacity": item.GetProperty("Opacity"),
+            "CompositeMode": item.GetProperty("CompositeMode"),
+        }
     elif action == "set_composite":
+        valid_modes = {
+            "Normal",
+            "Add",
+            "Subtract",
+            "Multiply",
+            "Screen",
+            "Overlay",
+            "Darken",
+            "Lighten",
+            "ColorDodge",
+            "ColorBurn",
+            "HardLight",
+            "SoftLight",
+            "Difference",
+            "Exclusion",
+            "Contrast",
+            "Hue",
+            "Saturation",
+            "Color",
+            "Luminosity",
+            "Tile",
+            "Behind",
+            "Stencil",
+            "OverlayStar",
+            "Maximum",
+        }
         results = {}
         if "Opacity" in p:
             results["Opacity"] = bool(item.SetProperty("Opacity", p["Opacity"]))
         if "CompositeMode" in p:
-            results["CompositeMode"] = bool(item.SetProperty("CompositeMode", p["CompositeMode"]))
-        return _ok(**results) if results else _err("Specify Opacity and/or CompositeMode")
+            mode = p["CompositeMode"]
+            if isinstance(mode, int) or mode not in valid_modes:
+                return _err(
+                    f"Invalid CompositeMode: {mode}. Valid strings: {', '.join(sorted(valid_modes))}"
+                )
+            results["CompositeMode"] = bool(item.SetProperty("CompositeMode", mode))
+        return (
+            _ok(**results) if results else _err("Specify Opacity and/or CompositeMode")
+        )
 
     # ── Audio ──
     elif action == "get_audio":
         keys = ["Volume", "Pan", "AudioSyncOffsetIsManual", "AudioSyncOffset"]
-        return {k: item.GetProperty(k) for k in keys}
+        return _err(
+            "Audio properties (Volume, Pan, AudioSyncOffset) are NOT supported by the Resolve Scripting API. TimelineItem.GetProperty() does not expose audio data."
+        )
     elif action == "set_audio":
-        valid = {"Volume", "Pan", "AudioSyncOffsetIsManual", "AudioSyncOffset"}
-        results = {}
-        for k, v in p.items():
-            if k in valid:
-                results[k] = bool(item.SetProperty(k, v))
-        return _ok(**results) if results else _err(f"Specify one or more of: {', '.join(sorted(valid))}")
+        return _err(
+            "Audio properties (Volume, Pan, AudioSyncOffset) are NOT supported by the Resolve Scripting API. TimelineItem.SetProperty() does not support audio data."
+        )
 
     # ── Keyframes ──
     elif action == "get_keyframes":
         prop = p["property"]
-        count = item.GetKeyframeCount(prop)
+        count = item.GetKeyframeCount(prop) or 0
         if count == 0:
             return {"property": prop, "count": 0, "keyframes": []}
         kfs = []
         for i in range(count):
             kf = item.GetKeyframeAtIndex(prop, i)
             val = item.GetPropertyAtKeyframeIndex(prop, i)
-            kfs.append({"frame": kf.get("frame") if isinstance(kf, dict) else kf, "value": val})
+            kfs.append(
+                {"frame": kf.get("frame") if isinstance(kf, dict) else kf, "value": val}
+            )
         return {"property": prop, "count": count, "keyframes": kfs}
     elif action == "add_keyframe":
-        return {"success": bool(item.AddKeyframe(p["property"], p["frame"], p["value"]))}
+        return {
+            "success": bool(item.AddKeyframe(p["property"], p["frame"], p["value"]))
+        }
     elif action == "modify_keyframe":
         kw = {}
         if "new_value" in p:
@@ -1608,17 +2548,69 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
         valid = ["Linear", "Bezier", "EaseIn", "EaseOut", "EaseInOut"]
         if p.get("interpolation") not in valid:
             return _err(f"Invalid interpolation. Must be one of: {', '.join(valid)}")
-        return {"success": bool(item.SetKeyframeInterpolation(p["property"], p["frame"], p["interpolation"]))}
+        return {
+            "success": bool(
+                item.SetKeyframeInterpolation(
+                    p["property"], p["frame"], p["interpolation"]
+                )
+            )
+        }
 
-    return _unknown(action, ["get_name","get_property","set_property","get_duration","get_start","get_end","get_source_start_frame","get_source_end_frame","get_source_start_time","get_source_end_time","get_left_offset","get_right_offset","set_clip_enabled","get_clip_enabled","update_sidecar","get_unique_id","get_media_pool_item","get_stereo_convergence","get_stereo_left_window","get_stereo_right_window","get_linked_items","get_track_type_and_index","get_source_audio_mapping","load_burnin_preset","get_retime","set_retime","get_transform","set_transform","get_crop","set_crop","get_composite","set_composite","get_audio","set_audio","get_keyframes","add_keyframe","modify_keyframe","delete_keyframe","set_keyframe_interpolation"])
+    return _unknown(
+        action,
+        [
+            "get_name",
+            "get_property",
+            "set_property",
+            "get_duration",
+            "get_start",
+            "get_end",
+            "get_source_start_frame",
+            "get_source_end_frame",
+            "get_source_start_time",
+            "get_source_end_time",
+            "get_left_offset",
+            "get_right_offset",
+            "set_clip_enabled",
+            "get_clip_enabled",
+            "update_sidecar",
+            "get_unique_id",
+            "get_media_pool_item",
+            "get_stereo_convergence",
+            "get_stereo_left_window",
+            "get_stereo_right_window",
+            "get_linked_items",
+            "get_track_type_and_index",
+            "get_source_audio_mapping",
+            "load_burnin_preset",
+            "get_retime",
+            "set_retime",
+            "get_transform",
+            "set_transform",
+            "get_crop",
+            "set_crop",
+            "get_composite",
+            "set_composite",
+            "get_audio",
+            "set_audio",
+            "get_keyframes",
+            "add_keyframe",
+            "modify_keyframe",
+            "delete_keyframe",
+            "set_keyframe_interpolation",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 19: timeline_item_markers
+# TOOL 20: timeline_item_markers
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def timeline_item_markers(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def timeline_item_markers(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Markers, flags, and clip color on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -1645,13 +2637,26 @@ def timeline_item_markers(action: str, params: Optional[Dict[str, Any]] = None) 
         return err
 
     if action == "add":
-        return {"success": bool(item.AddMarker(p["frame"], p["color"], p["name"], p["note"], p["duration"], p.get("custom_data", "")))}
+        return {
+            "success": bool(
+                item.AddMarker(
+                    p["frame"],
+                    p["color"],
+                    p["name"],
+                    p["note"],
+                    p["duration"],
+                    p.get("custom_data", ""),
+                )
+            )
+        }
     elif action == "get_all":
         return {"markers": _ser(item.GetMarkers())}
     elif action == "get_by_custom_data":
         return {"markers": _ser(item.GetMarkerByCustomData(p["custom_data"]))}
     elif action == "update_custom_data":
-        return {"success": bool(item.UpdateMarkerCustomData(p["frame"], p["custom_data"]))}
+        return {
+            "success": bool(item.UpdateMarkerCustomData(p["frame"], p["custom_data"]))
+        }
     elif action == "get_custom_data":
         return {"data": item.GetMarkerCustomData(p["frame"])}
     elif action == "delete_by_color":
@@ -1672,15 +2677,36 @@ def timeline_item_markers(action: str, params: Optional[Dict[str, Any]] = None) 
         return {"success": bool(item.SetClipColor(p["color"]))}
     elif action == "clear_clip_color":
         return {"success": bool(item.ClearClipColor())}
-    return _unknown(action, ["add","get_all","get_by_custom_data","update_custom_data","get_custom_data","delete_by_color","delete_at_frame","delete_by_custom_data","add_flag","get_flags","clear_flags","get_clip_color","set_clip_color","clear_clip_color"])
+    return _unknown(
+        action,
+        [
+            "add",
+            "get_all",
+            "get_by_custom_data",
+            "update_custom_data",
+            "get_custom_data",
+            "delete_by_color",
+            "delete_at_frame",
+            "delete_by_custom_data",
+            "add_flag",
+            "get_flags",
+            "clear_flags",
+            "get_clip_color",
+            "set_clip_color",
+            "clear_clip_color",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 20: timeline_item_fusion
+# TOOL 21: timeline_item_fusion
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def timeline_item_fusion(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def timeline_item_fusion(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Fusion composition operations on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -1728,20 +2754,41 @@ def timeline_item_fusion(action: str, params: Optional[Dict[str, Any]] = None) -
         comp = item.LoadFusionCompByName(p["name"])
         return _ok() if comp else _err("Failed to load comp")
     elif action == "rename_comp":
-        return {"success": bool(item.RenameFusionCompByName(p["old_name"], p["new_name"]))}
+        return {
+            "success": bool(item.RenameFusionCompByName(p["old_name"], p["new_name"]))
+        }
     elif action == "get_cache_enabled":
         return {"enabled": item.GetIsFusionOutputCacheEnabled()}
     elif action == "set_cache":
         return {"success": bool(item.SetFusionOutputCache(p["value"]))}
-    return _unknown(action, ["add_comp","get_comp_count","get_comp_names","get_comp_by_name","get_comp_by_index","export_comp","import_comp","delete_comp","load_comp","rename_comp","get_cache_enabled","set_cache"])
+    return _unknown(
+        action,
+        [
+            "add_comp",
+            "get_comp_count",
+            "get_comp_names",
+            "get_comp_by_name",
+            "get_comp_by_index",
+            "export_comp",
+            "import_comp",
+            "delete_comp",
+            "load_comp",
+            "rename_comp",
+            "get_cache_enabled",
+            "set_cache",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 21: timeline_item_color
+# TOOL 22: timeline_item_color
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def timeline_item_color(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def timeline_item_color(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Color grading, versions, LUTs, cache, and AI tools on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -1786,7 +2833,7 @@ def timeline_item_color(action: str, params: Optional[Dict[str, Any]] = None) ->
         if tl:
             for tt in ["video"]:
                 for ti in range(1, tl.GetTrackCount(tt) + 1):
-                    for it in (tl.GetItemListInTrack(tt, ti) or []):
+                    for it in tl.GetItemListInTrack(tt, ti) or []:
                         if it.GetUniqueId() in target_ids:
                             targets.append(it)
         return {"success": bool(item.CopyGrades(targets))}
@@ -1799,11 +2846,19 @@ def timeline_item_color(action: str, params: Optional[Dict[str, Any]] = None) ->
     elif action == "load_version":
         return {"success": bool(item.LoadVersionByName(p["name"], p.get("type", 0)))}
     elif action == "rename_version":
-        return {"success": bool(item.RenameVersionByName(p["old_name"], p["new_name"], p.get("type", 0)))}
+        return {
+            "success": bool(
+                item.RenameVersionByName(p["old_name"], p["new_name"], p.get("type", 0))
+            )
+        }
     elif action == "delete_version":
         return {"success": bool(item.DeleteVersionByName(p["name"], p.get("type", 0)))}
     elif action == "get_node_graph":
-        g = item.GetNodeGraph(p["layer_index"]) if "layer_index" in p else item.GetNodeGraph()
+        g = (
+            item.GetNodeGraph(p["layer_index"])
+            if "layer_index" in p
+            else item.GetNodeGraph()
+        )
         return {"available": g is not None}
     elif action == "get_color_group":
         g = item.GetColorGroup()
@@ -1834,15 +2889,43 @@ def timeline_item_color(action: str, params: Optional[Dict[str, Any]] = None) ->
         return {"success": bool(item.CreateMagicMask(p.get("mode", "F")))}
     elif action == "regenerate_magic_mask":
         return {"success": bool(item.RegenerateMagicMask())}
-    return _unknown(action, ["set_cdl","copy_grades","add_version","get_current_version","get_version_names","load_version","rename_version","delete_version","get_node_graph","get_color_group","assign_color_group","remove_from_color_group","export_lut","get_color_cache","set_color_cache","get_fusion_cache","set_fusion_cache","stabilize","smart_reframe","create_magic_mask","regenerate_magic_mask"])
+    return _unknown(
+        action,
+        [
+            "set_cdl",
+            "copy_grades",
+            "add_version",
+            "get_current_version",
+            "get_version_names",
+            "load_version",
+            "rename_version",
+            "delete_version",
+            "get_node_graph",
+            "get_color_group",
+            "assign_color_group",
+            "remove_from_color_group",
+            "export_lut",
+            "get_color_cache",
+            "set_color_cache",
+            "get_fusion_cache",
+            "set_fusion_cache",
+            "stabilize",
+            "smart_reframe",
+            "create_magic_mask",
+            "regenerate_magic_mask",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 22: timeline_item_takes
+# TOOL 23: timeline_item_takes
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def timeline_item_takes(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def timeline_item_takes(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Take management on timeline items. Identify by track_type, track_index, item_index.
 
     Actions:
@@ -1868,7 +2951,11 @@ def timeline_item_takes(action: str, params: Optional[Dict[str, Any]] = None) ->
         clip = _find_clip(mp.GetRootFolder(), p["clip_id"])
         if not clip:
             return _err(f"Clip not found: {p['clip_id']}")
-        return {"success": bool(item.AddTake(clip, p.get("start_frame", 0), p.get("end_frame", 0)))}
+        return {
+            "success": bool(
+                item.AddTake(clip, p.get("start_frame", 0), p.get("end_frame", 0))
+            )
+        }
     elif action == "get_count":
         return {"count": item.GetTakesCount()}
     elif action == "get_selected_index":
@@ -1881,12 +2968,24 @@ def timeline_item_takes(action: str, params: Optional[Dict[str, Any]] = None) ->
         return {"success": bool(item.DeleteTakeByIndex(p["index"]))}
     elif action == "finalize":
         return {"success": bool(item.FinalizeTake())}
-    return _unknown(action, ["add","get_count","get_selected_index","get_by_index","select","delete","finalize"])
+    return _unknown(
+        action,
+        [
+            "add",
+            "get_count",
+            "get_selected_index",
+            "get_by_index",
+            "select",
+            "delete",
+            "finalize",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 23: gallery
+# TOOL 24: gallery
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def gallery(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -1936,25 +3035,48 @@ def gallery(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, A
         return _err("Album index out of range")
     elif action == "get_still_albums":
         albums = gal.GetGalleryStillAlbums() or []
-        return {"albums": [{"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)]}
+        return {
+            "albums": [
+                {"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)
+            ]
+        }
     elif action == "get_power_grade_albums":
         albums = gal.GetGalleryPowerGradeAlbums() or []
-        return {"albums": [{"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)]}
+        return {
+            "albums": [
+                {"name": gal.GetAlbumName(a), "index": i} for i, a in enumerate(albums)
+            ]
+        }
     elif action == "create_still_album":
         album = gal.CreateGalleryStillAlbum()
         return _ok() if album else _err("Failed to create still album")
     elif action == "create_power_grade_album":
         album = gal.CreateGalleryPowerGradeAlbum()
         return _ok() if album else _err("Failed to create power grade album")
-    return _unknown(action, ["get_album_name","set_album_name","get_current_album","set_current_album","get_still_albums","get_power_grade_albums","create_still_album","create_power_grade_album"])
+    return _unknown(
+        action,
+        [
+            "get_album_name",
+            "set_album_name",
+            "get_current_album",
+            "set_current_album",
+            "get_still_albums",
+            "get_power_grade_albums",
+            "create_still_album",
+            "create_power_grade_album",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 24: gallery_stills
+# TOOL 25: gallery_stills
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
-def gallery_stills(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def gallery_stills(
+    action: str, params: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Manage stills in gallery albums (best results on Color page).
 
     Actions:
@@ -2019,9 +3141,19 @@ def gallery_stills(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
         stills = album.GetStills() or []
         if not stills:
             return _err("No stills to export")
-        return {"success": bool(album.ExportStills(stills, p["folder_path"], p.get("prefix", "still"), p.get("format", "dpx")))}
+        return {
+            "success": bool(
+                album.ExportStills(
+                    stills,
+                    p["folder_path"],
+                    p.get("prefix", "still"),
+                    p.get("format", "dpx"),
+                )
+            )
+        }
     elif action == "grab_and_export":
         import time, os
+
         folder_path = p.get("folder_path")
         if not folder_path:
             return _err("folder_path is required")
@@ -2039,7 +3171,9 @@ def gallery_stills(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
             return err2
         still = tl.GrabStill()
         if not still:
-            return _err("GrabStill failed — ensure Color page is active with a clip under the playhead")
+            return _err(
+                "GrabStill failed — ensure Color page is active with a clip under the playhead"
+            )
         time.sleep(0.5)
         # Export using the live still reference with format fallback chain
         export_ok = False
@@ -2055,7 +3189,9 @@ def gallery_stills(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
         if delete_after:
             album.DeleteStills([still])
         if not export_ok:
-            return _err("ExportStills failed — ensure the Gallery panel is open on the Color page (Workspace > Gallery)")
+            return _err(
+                "ExportStills failed — ensure the Gallery panel is open on the Color page (Workspace > Gallery)"
+            )
         # Wait for filesystem
         time.sleep(0.3)
         # Find new files
@@ -2094,17 +3230,38 @@ def gallery_stills(action: str, params: Optional[Dict[str, Any]] = None) -> Dict
                     os.rmdir(folder_path)
             except OSError:
                 pass
-        return {"files": file_details, "format": used_format, "folder": folder_path, "cleaned_up": cleanup}
+        return {
+            "files": file_details,
+            "format": used_format,
+            "folder": folder_path,
+            "cleaned_up": cleanup,
+        }
     elif action == "delete_stills":
         stills = album.GetStills() or []
         to_delete = [stills[i] for i in p["still_indices"] if i < len(stills)]
-        return {"success": bool(album.DeleteStills(to_delete))} if to_delete else _err("No valid still indices")
-    return _unknown(action, ["get_stills","get_label","set_label","import_stills","export_stills","grab_and_export","delete_stills"])
+        return (
+            {"success": bool(album.DeleteStills(to_delete))}
+            if to_delete
+            else _err("No valid still indices")
+        )
+    return _unknown(
+        action,
+        [
+            "get_stills",
+            "get_label",
+            "set_label",
+            "import_stills",
+            "export_stills",
+            "grab_and_export",
+            "delete_stills",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 25: graph
+# TOOL 26: graph
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -2142,7 +3299,11 @@ def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
         _, item, err = _get_item(p)
         if err:
             return err
-        g = item.GetNodeGraph(p["layer_index"]) if "layer_index" in p else item.GetNodeGraph()
+        g = (
+            item.GetNodeGraph(p["layer_index"])
+            if "layer_index" in p
+            else item.GetNodeGraph()
+        )
     elif source in ("color_group_pre", "color_group_post"):
         _, proj, err = _check()
         if err:
@@ -2150,7 +3311,11 @@ def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
         groups = proj.GetColorGroupsList() or []
         for cg in groups:
             if cg.GetName() == p.get("group_name"):
-                g = cg.GetPreClipNodeGraph() if source == "color_group_pre" else cg.GetPostClipNodeGraph()
+                g = (
+                    cg.GetPreClipNodeGraph()
+                    if source == "color_group_pre"
+                    else cg.GetPostClipNodeGraph()
+                )
                 break
         if g is None:
             return _err(f"Color group '{p.get('group_name')}' not found")
@@ -2175,17 +3340,37 @@ def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
     elif action == "set_node_enabled":
         return {"success": bool(g.SetNodeEnabled(p["node_index"], p["enabled"]))}
     elif action == "apply_grade_from_drx":
-        return {"success": bool(g.ApplyGradeFromDRX(p["path"], p.get("grade_mode", p.get("mode", 0))))}
+        return {
+            "success": bool(
+                g.ApplyGradeFromDRX(p["path"], p.get("grade_mode", p.get("mode", 0)))
+            )
+        }
     elif action == "apply_arri_cdl_lut":
         return {"success": bool(g.ApplyArriCdlLut())}
     elif action == "reset_all_grades":
         return {"success": bool(g.ResetAllGrades())}
-    return _unknown(action, ["get_num_nodes","get_lut","set_lut","get_node_cache","set_node_cache","get_node_label","get_tools_in_node","set_node_enabled","apply_grade_from_drx","apply_arri_cdl_lut","reset_all_grades"])
+    return _unknown(
+        action,
+        [
+            "get_num_nodes",
+            "get_lut",
+            "set_lut",
+            "get_node_cache",
+            "set_node_cache",
+            "get_node_label",
+            "get_tools_in_node",
+            "set_node_enabled",
+            "apply_grade_from_drx",
+            "apply_arri_cdl_lut",
+            "reset_all_grades",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 26: color_group
+# TOOL 27: color_group
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def color_group(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -2225,19 +3410,34 @@ def color_group(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
     elif action == "get_clips":
         tl = proj.GetCurrentTimeline()
         clips = group.GetClipsInTimeline(tl) if tl else []
-        return {"clips": [{"name": c.GetName(), "id": c.GetUniqueId()} for c in (clips or [])]}
+        return {
+            "clips": [
+                {"name": c.GetName(), "id": c.GetUniqueId()} for c in (clips or [])
+            ]
+        }
     elif action == "get_pre_clip_graph":
         g = group.GetPreClipNodeGraph()
         return {"available": g is not None, "num_nodes": g.GetNumNodes() if g else 0}
     elif action == "get_post_clip_graph":
         g = group.GetPostClipNodeGraph()
         return {"available": g is not None, "num_nodes": g.GetNumNodes() if g else 0}
-    return _unknown(action, ["list","get_name","set_name","get_clips","get_pre_clip_graph","get_post_clip_graph"])
+    return _unknown(
+        action,
+        [
+            "list",
+            "get_name",
+            "set_name",
+            "get_clips",
+            "get_pre_clip_graph",
+            "get_post_clip_graph",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 27: fusion_comp
+# TOOL 28: fusion_comp
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -2286,25 +3486,34 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
 
     comp = fusion.GetCurrentComp()
     if not comp:
-        return _err("No active Fusion composition. Open a clip in the Fusion page first, or use timeline_item_fusion to add a comp.")
+        return _err(
+            "No active Fusion composition. Open a clip in the Fusion page first, or use timeline_item_fusion to add a comp."
+        )
 
     # --- Node Management ---
     if action == "add_tool":
         tool_type = p.get("tool_type")
         if not tool_type:
-            return _err("tool_type is required (e.g. 'Merge', 'Transform', 'TextPlus', 'Background')")
+            return _err(
+                "tool_type is required (e.g. 'Merge', 'Transform', 'TextPlus', 'Background')"
+            )
         x = p.get("x", -1)
         y = p.get("y", -1)
         comp.Lock()
         try:
             tool = comp.AddTool(tool_type, x, y)
             if not tool:
-                return _err(f"Failed to add tool '{tool_type}'. Check the tool ID is valid.")
+                return _err(
+                    f"Failed to add tool '{tool_type}'. Check the tool ID is valid."
+                )
             name = p.get("name")
             if name:
                 tool.SetAttrs({"TOOLS_Name": name})
             attrs = tool.GetAttrs()
-            return {"tool_name": attrs.get("TOOLS_Name", ""), "tool_type": attrs.get("TOOLS_RegID", tool_type)}
+            return {
+                "tool_name": attrs.get("TOOLS_Name", ""),
+                "tool_type": attrs.get("TOOLS_RegID", tool_type),
+            }
         finally:
             comp.Unlock()
 
@@ -2330,10 +3539,12 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             for idx in tools:
                 t = tools[idx]
                 attrs = t.GetAttrs()
-                result.append({
-                    "name": attrs.get("TOOLS_Name", ""),
-                    "type": attrs.get("TOOLS_RegID", ""),
-                })
+                result.append(
+                    {
+                        "name": attrs.get("TOOLS_Name", ""),
+                        "type": attrs.get("TOOLS_RegID", ""),
+                    }
+                )
         return {"tools": result, "count": len(result)}
 
     elif action == "find_tool":
@@ -2341,7 +3552,12 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         if not tool:
             return {"found": False}
         attrs = tool.GetAttrs()
-        return {"found": True, "name": attrs.get("TOOLS_Name", ""), "type": attrs.get("TOOLS_RegID", ""), "attrs": _ser(attrs)}
+        return {
+            "found": True,
+            "name": attrs.get("TOOLS_Name", ""),
+            "type": attrs.get("TOOLS_RegID", ""),
+            "attrs": _ser(attrs),
+        }
 
     # --- Wiring ---
     elif action == "connect":
@@ -2385,12 +3601,14 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
                     conn_tool = connected.GetTool()
                     if conn_tool:
                         conn_info = conn_tool.GetAttrs().get("TOOLS_Name", "")
-                inputs.append({
-                    "name": attrs.get("INPS_Name", ""),
-                    "id": attrs.get("INPS_ID", ""),
-                    "type": attrs.get("INPS_DataType", ""),
-                    "connected_to": conn_info,
-                })
+                inputs.append(
+                    {
+                        "name": attrs.get("INPS_Name", ""),
+                        "id": attrs.get("INPS_ID", ""),
+                        "type": attrs.get("INPS_DataType", ""),
+                        "connected_to": conn_info,
+                    }
+                )
         return {"inputs": inputs}
 
     elif action == "get_outputs":
@@ -2403,11 +3621,13 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             for idx in output_list:
                 out = output_list[idx]
                 attrs = out.GetAttrs()
-                outputs.append({
-                    "name": attrs.get("OUTS_Name", ""),
-                    "id": attrs.get("OUTS_ID", ""),
-                    "type": attrs.get("OUTS_DataType", ""),
-                })
+                outputs.append(
+                    {
+                        "name": attrs.get("OUTS_Name", ""),
+                        "id": attrs.get("OUTS_ID", ""),
+                        "type": attrs.get("OUTS_DataType", ""),
+                    }
+                )
         return {"outputs": outputs}
 
     # --- Parameters ---
@@ -2457,7 +3677,9 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         try:
             inp = tool[p["input_name"]]
             if not inp:
-                return _err(f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'")
+                return _err(
+                    f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'"
+                )
             inp[p["time"]] = p["value"]
             return _ok()
         finally:
@@ -2469,7 +3691,9 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             return _err(f"Tool '{p['tool_name']}' not found")
         inp = tool[p["input_name"]]
         if not inp:
-            return _err(f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'")
+            return _err(
+                f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'"
+            )
         keyframes = []
         kfs = inp.GetKeyFrames()
         if kfs:
@@ -2485,7 +3709,9 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         try:
             inp = tool[p["input_name"]]
             if not inp:
-                return _err(f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'")
+                return _err(
+                    f"Input '{p['input_name']}' not found on tool '{p['tool_name']}'"
+                )
             inp.RemoveKeyFrame(p["time"])
             return _ok()
         finally:
@@ -2501,7 +3727,9 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         }
 
     elif action == "set_frame_range":
-        comp.SetAttrs({"COMPN_RenderStartTime": p["start"], "COMPN_RenderEndTime": p["end"]})
+        comp.SetAttrs(
+            {"COMPN_RenderStartTime": p["start"], "COMPN_RenderEndTime": p["end"]}
+        )
         return _ok()
 
     elif action == "render":
@@ -2516,14 +3744,31 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         comp.EndUndo(p.get("keep", True))
         return _ok()
 
-    return _unknown(action, [
-        "add_tool","delete_tool","get_tool_list","find_tool",
-        "connect","disconnect","get_inputs","get_outputs",
-        "set_input","get_input","set_attrs","get_attrs",
-        "add_keyframe","get_keyframes","delete_keyframe",
-        "get_comp_info","set_frame_range","render",
-        "start_undo","end_undo",
-    ])
+    return _unknown(
+        action,
+        [
+            "add_tool",
+            "delete_tool",
+            "get_tool_list",
+            "find_tool",
+            "connect",
+            "disconnect",
+            "get_inputs",
+            "get_outputs",
+            "set_input",
+            "get_input",
+            "set_attrs",
+            "get_attrs",
+            "add_keyframe",
+            "get_keyframes",
+            "delete_keyframe",
+            "get_comp_info",
+            "set_frame_range",
+            "render",
+            "start_undo",
+            "end_undo",
+        ],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2535,9 +3780,9 @@ if __name__ == "__main__":
     if "--full" in sys.argv:
         logger.info("Starting full 342-tool server...")
         import importlib
+
         spec = importlib.util.spec_from_file_location(
-            "resolve_mcp_server",
-            os.path.join(current_dir, "resolve_mcp_server.py")
+            "resolve_mcp_server", os.path.join(current_dir, "resolve_mcp_server.py")
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

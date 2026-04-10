@@ -1,6 +1,6 @@
 # DaVinci Resolve MCP Server
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/samuelgursky/davinci-resolve-mcp/releases)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/samuelgursky/davinci-resolve-mcp/releases)
 [![API Coverage](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#api-coverage)
 [![Tools](https://img.shields.io/badge/MCP%20Tools-27%20(342%20full)-blue.svg)](#server-modes)
 [![Tested](https://img.shields.io/badge/Live%20Tested-98.5%25-green.svg)](#test-results)
@@ -10,7 +10,29 @@
 
 A Model Context Protocol (MCP) server providing **complete coverage** of the DaVinci Resolve Scripting API. Connect AI assistants (Claude, Cursor, Windsurf) to DaVinci Resolve and control every aspect of your post-production workflow through natural language.
 
-### What's New in v2.1.0
+### What's New in v2.2.0
+
+**Bug Fixes:**
+- `get_keyframes`: Fixed crash when GetKeyframeCount returns None (v20 compatibility)
+- `get_property`: Fixed returning null when key is empty (calls GetProperty() with no args)
+- `get_audio`/`set_audio`: Returns clear error — audio properties not supported by Resolve Scripting API
+- `get_codecs`: Added fallback when format not set (tries all formats to find codecs)
+- `get_keyframe_mode`: Added null handling with mode_name mapping
+
+**New Features:**
+- `resolve_constants` tool: 19 categories with ~130 API constants (composite modes, retime processes, motion estimation, etc.)
+- `add_track`: New `new_track_options` parameter for audioType and index
+- `append_to_timeline`: New `clip_infos` parameter for advanced clip control
+- `create_timeline_from_clips`: New `clip_infos` parameter support
+- `import_media`: New `clip_infos` support for image sequences
+- `timeline_item` `list_properties` action: Lists all 26 valid property keys
+
+**Validation:**
+- `set_composite`: Validates against 25 known blend modes
+- `set_retime`: Validates process and motion_estimation against known values
+- `set_crop`: Validates crop values are in [0.0, 1.0] range and types are correct
+
+### v2.1.0
 
 - **New `fusion_comp` tool** — 20-action tool exposing the full Fusion composition node graph API. Add/delete/find nodes, wire connections, set/get parameters, manage keyframes, control undo grouping, set render ranges, and trigger renders — all on the currently active Fusion page composition
 - **`timeline_item_fusion` cache actions** — added `get_cache_enabled` and `set_cache` actions for Fusion output cache control directly on timeline items
