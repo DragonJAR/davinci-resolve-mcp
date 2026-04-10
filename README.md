@@ -10,6 +10,30 @@
 
 A Model Context Protocol (MCP) server providing **complete coverage** of the DaVinci Resolve Scripting API. Connect AI assistants (Claude, Cursor, Windsurf) to DaVinci Resolve and control every aspect of your post-production workflow through natural language.
 
+## Project Status
+
+**Current Version:** v2.2.0  
+**Last Updated:** April 2026  
+**API Docs Base:** DaVinci Resolve Scripting API v19.1.3+ (October 2024)  
+**Tested Against:** DaVinci Resolve Studio v20.3.2.9  
+**Compatibility:** DaVinci Resolve 18.5+ (Scripting API enabled)
+
+### What's Working
+- ✅ 28 compound tools / 342 granular tools covering 100% of the documented Scripting API (324 methods)
+- ✅ Project, Media Pool, Timeline, Color, Fusion, Render, Gallery, and Layout Preset management
+- ✅ Live tested at 98.5% success rate against Resolve v20.3
+- ✅ Cross-platform support (macOS, Linux, Windows)
+- ✅ MCP protocol integration with Claude, Cursor, Windsurf, and other AI assistants
+
+### Known Limitations
+- ⚠️ Audio properties (Volume, Pan, AudioSyncOffset) are NOT exposed by the Resolve Scripting API — `get_audio`/`set_audio` return clear error messages
+- ⚠️ Timeline editing operations (BladeClip, InsertClip, RippleEdit, Trim) do NOT exist in the official Scripting API — this is a Blackmagic limitation, not an MCP gap
+- ⚠️ API documentation is from October 2024 (v19.1.3+). Resolve v20.3 added some methods that return dicts instead of lists — these are handled but not yet fully documented
+- ⚠️ No real-time event streaming (render progress, playhead changes) — the MCP protocol is request/response only
+
+### Recent Changes (v2.2.0)
+See [What's New in v2.2.0](#whats-new-in-v220) below for the full changelog.
+
 ### What's New in v2.2.0
 
 **Bug Fixes:**
