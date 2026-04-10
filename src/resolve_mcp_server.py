@@ -41,7 +41,6 @@ if RESOLVE_MODULES_PATH not in sys.path:
 from mcp.server.fastmcp import FastMCP
 
 # Import our utility functions
-from src.utils.platform import setup_environment, get_platform, get_resolve_paths
 from src.utils.object_inspection import (
     inspect_object,
     get_object_methods,

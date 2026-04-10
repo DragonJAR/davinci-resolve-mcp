@@ -365,6 +365,10 @@ def resolve_control(
     elif action == "quit":
         r.Quit()
         return _ok()
+    elif action == "get_fairlight_presets":
+        return {"presets": _ser(r.GetFairlightPresets())}
+    elif action == "set_high_priority":
+        return {"success": bool(r.SetHighPriority())}
     return _unknown(
         action,
         [
@@ -375,6 +379,8 @@ def resolve_control(
             "get_keyframe_mode",
             "set_keyframe_mode",
             "quit",
+            "get_fairlight_presets",
+            "set_high_priority",
         ],
     )
 
@@ -990,6 +996,12 @@ def project_settings(
             if g.GetName() == p["name"]:
                 return {"success": bool(proj.DeleteColorGroup(g))}
         return _err(f"Color group '{p['name']}' not found")
+    elif action == "apply_fairlight_preset":
+        return {
+            "success": bool(
+                proj.ApplyFairlightPresetToCurrentTimeline(p["preset_name"])
+            )
+        }
     return _unknown(
         action,
         [
@@ -1008,6 +1020,7 @@ def project_settings(
             "get_color_groups",
             "add_color_group",
             "delete_color_group",
+            "apply_fairlight_preset",
         ],
     )
 
@@ -1716,6 +1729,19 @@ def media_pool_item_markers(
         return {"flags": clip.GetFlagList()}
     elif action == "clear_flags":
         return {"success": bool(clip.ClearFlags(p["color"]))}
+    elif action == "set_name":
+        return {"success": bool(clip.SetName(p["name"]))}
+    elif action == "link_full_resolution_media":
+        return {"success": bool(clip.LinkFullResolutionMedia())}
+    elif action == "monitor_growing_file":
+        return {"success": bool(clip.MonitorGrowingFile())}
+    elif action == "replace_clip_preserve_sub_clip":
+        replacement = _find_clip(mp.GetRootFolder(), p.get("media_pool_item", ""))
+        if not replacement:
+            replacement = _find_clip(mp.GetRootFolder(), p.get("clip_id", ""))
+        if not replacement:
+            return _err("Provide media_pool_item or clip_id for replacement clip")
+        return {"success": bool(clip.ReplaceClipPreserveSubClip(replacement))}
     return _unknown(
         action,
         [
@@ -1730,6 +1756,10 @@ def media_pool_item_markers(
             "add_flag",
             "get_flags",
             "clear_flags",
+            "set_name",
+            "link_full_resolution_media",
+            "monitor_growing_file",
+            "replace_clip_preserve_sub_clip",
         ],
     )
 
@@ -1971,6 +2001,17 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
         return {"success": bool(tl.ClearMarkInOut(p.get("type", "all")))}
     elif action == "convert_to_stereo":
         return {"success": bool(tl.ConvertTimelineToStereo())}
+    # ── v20.3 New Methods ──
+    elif action == "get_items_in_track":
+        items = tl.GetItemsInTrack(p["track_type"], p["track_index"])
+        return {"items": _ser(items)}
+    elif action == "get_voice_isolation_state":
+        state = tl.GetVoiceIsolationState(p["track_index"])
+        return _ser(state) if state else {"isEnabled": False, "amount": 0}
+    elif action == "set_voice_isolation_state":
+        return {
+            "success": bool(tl.SetVoiceIsolationState(p["track_index"], p["state"]))
+        }
     return _unknown(
         action,
         [
@@ -2016,6 +2057,9 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
             "set_mark_in_out",
             "clear_mark_in_out",
             "convert_to_stereo",
+            "get_items_in_track",
+            "get_voice_isolation_state",
+            "set_voice_isolation_state",
         ],
     )
 
@@ -2364,7 +2408,7 @@ def timeline_item(
                 else:
                     # Try normalized lookup
                     normalized = val.lower().replace("-", " ").replace("_", " ")
-                    val = process_map.get(normalized)
+                    val = process_map.get(normalized, 1)
                     if val is None:
                         return _err(
                             f"Invalid process: {val}. Valid strings: {', '.join(sorted(valid_processes))} or integer 0-3"
@@ -2568,6 +2612,8 @@ def timeline_item(
                 )
             )
         }
+    elif action == "set_name":
+        return {"success": bool(item.SetName(p["name"]))}
 
     return _unknown(
         action,
@@ -2611,6 +2657,7 @@ def timeline_item(
             "modify_keyframe",
             "delete_keyframe",
             "set_keyframe_interpolation",
+            "set_name",
         ],
     )
 
