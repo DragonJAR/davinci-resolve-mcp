@@ -427,19 +427,4 @@ This MCP server controls DaVinci Resolve via its Scripting API. Some tools perfo
 
 **Recommendations for MCP client developers:**
 - Enable tool-call confirmation prompts for destructive tools (`quit_app`, `restart_app`, `delete_layout_preset`)
-- Do not grant blanket auto-approval to all tools in this server
-
-## License
-
-MIT
-
-## Author
-
-Samuel Gursky (samgursky@gmail.com)
-- GitHub: [github.com/samuelgursky](https://github.com/samuelgursky)
-
-## Acknowledgments
-
-- Blackmagic Design for DaVinci Resolve and its scripting API
-- The Model Context Protocol team for enabling AI assistant integration
-- Anthropic for Claude Code, used extensively in development and testing
+ - Do not grant blanket auto-approval to all tools in this server
