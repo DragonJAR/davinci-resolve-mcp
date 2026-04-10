@@ -156,6 +156,13 @@ def _resolve_safe_dir(path):
     return path
 
 
+def _validate_path(user_path: str) -> str:
+    """Validate that user_path doesn't contain path traversal."""
+    if ".." in user_path:
+        raise ValueError(f"Path traversal detected in: {user_path}")
+    return os.path.realpath(user_path)
+
+
 # ─── Connection Helpers ──────────────────────────────────────────────────────
 
 
@@ -4898,6 +4905,10 @@ def archive_project(
     resolve = get_resolve()
     if resolve is None:
         return {"error": "Not connected to DaVinci Resolve"}
+    try:
+        archive_path = _validate_path(archive_path)
+    except ValueError as e:
+        return {"error": str(e)}
     pm = resolve.GetProjectManager()
     result = pm.ArchiveProject(
         project_name,
@@ -5027,6 +5038,10 @@ def import_project_from_file(file_path: str) -> Dict[str, Any]:
     resolve = get_resolve()
     if resolve is None:
         return {"error": "Not connected to DaVinci Resolve"}
+    try:
+        file_path = _validate_path(file_path)
+    except ValueError as e:
+        return {"error": str(e)}
     pm = resolve.GetProjectManager()
     result = pm.ImportProject(file_path)
     return {"success": bool(result), "file_path": file_path}
@@ -5046,6 +5061,10 @@ def export_project_to_file(
     resolve = get_resolve()
     if resolve is None:
         return {"error": "Not connected to DaVinci Resolve"}
+    try:
+        file_path = _validate_path(file_path)
+    except ValueError as e:
+        return {"error": str(e)}
     pm = resolve.GetProjectManager()
     result = pm.ExportProject(project_name, file_path, with_stills_and_luts)
     return {
@@ -5065,6 +5084,10 @@ def restore_project(file_path: str) -> Dict[str, Any]:
     resolve = get_resolve()
     if resolve is None:
         return {"error": "Not connected to DaVinci Resolve"}
+    try:
+        file_path = _validate_path(file_path)
+    except ValueError as e:
+        return {"error": str(e)}
     pm = resolve.GetProjectManager()
     result = pm.RestoreProject(file_path)
     return {"success": bool(result), "file_path": file_path}
