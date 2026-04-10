@@ -11,6 +11,58 @@ As with Blackmagic Fusion scripts, user scripts written in Lua and Python progra
 or via command line. This permission can be changed in Resolve Preferences, to be only from Console, or to be invoked from the local network. Please be aware of the security implications when
 allowing scripting access from outside of the Resolve application.
 
+================================================================================
+NEW METHODS IN DAVINCI RESOLVE v20.3 (Not in October 2024 docs)
+================================================================================
+Last verified: April 2026 against DaVinci Resolve Studio v20.3.2.9
+
+The following methods exist in the live v20.3 API but are NOT documented
+in the official October 2024 scripting API documentation.
+
+--- Resolve ---
+  GetFairlightPresets()                                   --> [...]        # Returns Fairlight audio presets
+  SetHighPriority()                                      --> Bool        # Sets process to high priority
+
+--- ProjectManager ---
+  GetProjectLastModifiedTime(projectName)                 --> string      # Returns project modification timestamp
+
+--- Project ---
+  ApplyFairlightPresetToCurrentTimeline(presetName)       --> Bool        # Applies Fairlight preset to active timeline
+
+--- Timeline ---
+  GetItemsInTrack(trackType, index)                       --> {items...}  # Returns dict of timeline items (keyed by frame)
+  GetItemListInTrack(trackType, index)                     --> [items...]  # Returns list of timeline items
+  GetVoiceIsolationState(trackIndex)                       --> {isEnabled, amount}  # Voice isolation state for audio track
+  SetVoiceIsolationState(trackIndex, state)                --> Bool        # Enable/configure voice isolation on audio track
+
+--- MediaPoolItem ---
+  LinkFullResolutionMedia()                                --> Bool        # Link full resolution media for proxy workflows
+  MonitorGrowingFile()                                     --> Bool        # Monitor a file being written (live capture)
+  ReplaceClipPreserveSubClip(mediaPoolItem)                --> Bool        # Replace clip preserving sub-clip selections
+  SetName(name)                                            --> Bool        # Rename media pool item
+
+--- All classes ---
+  Print()                                                 --> None        # Debug print of object contents (NEW in v20.3)
+  Note: Print() is now available on Resolve, ProjectManager, Project,
+  MediaStorage, MediaPool, Folder, MediaPoolItem, Timeline,
+  Gallery, GalleryStillAlbum, Graph and possibly other classes.
+
+--- Deprecated methods (still work but renamed in API) ---
+  GetFoldersInCurrentFolder()   --> use GetFolderListInCurrentFolder()
+  GetProjectsInCurrentFolder()  --> use GetProjectListInCurrentFolder()
+  GetPresets()                  --> use GetPresetList()
+  GetRenderJobs()              --> use GetRenderJobList()
+  GetRenderPresets()            --> use GetRenderPresetList()
+  AddItemsToMediaPool()         --> use AddItemListToMediaPool()
+  GetFiles()                   --> use GetFileList()
+  GetMountedVolumes()           --> use GetMountedVolumeList()
+  GetSubFolders() [MediaStorage] --> use GetSubFolderList()
+  GetSubFolders() [Folder]      --> use GetSubFolderList()
+  GetClips()                   --> use GetClipList()
+  GetFlags()                   --> use GetFlagList()
+
+================================================================================
+
 Prerequisites
 -------------
 DaVinci Resolve scripting requires one of the following to be installed (for all users):
