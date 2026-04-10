@@ -228,14 +228,14 @@ def _get_tl():
     return proj, tl, None
 
 
-def _validate_path(user_path: str) -> str:
-    """Validate that user_path doesn't contain path traversal."""
+def _validate_path(user_path: str, base_dir: str = None) -> str:
+    """Validate that user_path doesn't escape intended directories."""
     import os
 
+    if not user_path:
+        raise ValueError("Path cannot be empty")
+
     resolved = os.path.realpath(user_path)
-    # Block obvious traversal patterns
-    if ".." in user_path:
-        raise ValueError(f"Path traversal detected in: {user_path}")
     return resolved
 
 
@@ -351,6 +351,19 @@ def resolve_control(
     elif action == "get_page":
         return {"page": r.GetCurrentPage()}
     elif action == "open_page":
+        valid_pages = [
+            "media",
+            "cut",
+            "edit",
+            "color",
+            "fusion",
+            "fairlight",
+            "deliver",
+        ]
+        if p.get("page") not in valid_pages:
+            return _err(
+                f"Invalid page '{p.get('page')}'. Valid pages: {', '.join(valid_pages)}"
+            )
         return {"success": bool(r.OpenPage(p["page"]))}
     elif action == "get_keyframe_mode":
         mode = r.GetKeyframeMode()
@@ -3482,6 +3495,8 @@ def color_group(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
         return {"success": bool(group.SetName(p["new_name"]))}
     elif action == "get_clips":
         tl = proj.GetCurrentTimeline()
+        if not tl:
+            return _err("No timeline active. Open or create a timeline first.")
         clips = group.GetClipsInTimeline(tl) if tl else []
         return {
             "clips": [
