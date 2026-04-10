@@ -1826,7 +1826,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
       get_end_frame() -> {frame}
       get_start_timecode() -> {timecode}
       set_start_timecode(timecode) -> {success}
-      get_track_count(track_type) -> {count}  — video, audio, subtitle
+      get_track_count(track_type) -> {count}  — track_type values: "video", "audio", "subtitle"
       add_track(track_type, sub_type?) -> {success}
       delete_track(track_type, index) -> {success}
       get_track_sub_type(track_type, index) -> {sub_type}
@@ -1837,20 +1837,20 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
       get_track_name(track_type, index) -> {name}
       set_track_name(track_type, index, name) -> {success}
       get_items(track_type, index) -> {items}
-      delete_clips(clip_ids, ripple?) -> {success}  — clip_ids: list of unique IDs
+      delete_clips(clip_ids, ripple?) -> {success}  — clip_ids: list of unique ID strings from get_items
       set_clips_linked(clip_ids, linked) -> {success}
       duplicate(name?) -> {success, name}
-      create_compound_clip(clip_ids, info?) -> {success}
+      create_compound_clip(clip_ids, info?) -> {success}  — info: optional dict with clip metadata
       create_fusion_clip(clip_ids) -> {success}
       import_into_timeline(path, options?) -> {success}
       export(path, type, subtype?) -> {success}  — type: AAF, EDL, FCPXML, etc.
       get_setting(name?) -> {settings}
       set_setting(name, value) -> {success}
-      insert_generator(name) -> {success}
+      insert_generator(name) -> {success}  — names depend on Resolve installation
       insert_fusion_generator(name) -> {success}
       insert_fusion_composition() -> {success}
       insert_ofx_generator(name) -> {success}
-      insert_title(name) -> {success}
+      insert_title(name) -> {success}  — names depend on Resolve installation
       insert_fusion_title(name) -> {success}
       get_unique_id() -> {id}
       get_node_graph() -> {available}
@@ -2271,7 +2271,10 @@ def timeline_item(
     Actions:
       get_name(track_type?, track_index?, item_index?) -> {name}
       get_property(key?, ...) -> {properties}
-        Valid keys: "Pan", "Tilt", "ZoomX", "ZoomY", "RotationAngle", "AnchorPointX", "AnchorPointY", "Pitch", "Yaw", "FlipX", "FlipY", "CropLeft", "CropRight", "CropTop", "CropBottom", "CropSoftness", "CropRetain", "Opacity", "CompositeMode", "Volume", "Pan", "AudioSyncOffset", "Speed", "Reverse", "FreezeFrame", "RetimeProcess", "MotionEstimation", "ResizeMode"
+        Valid property keys: Pan, Tilt, ZoomX, ZoomY, RotationAngle, AnchorPointX, AnchorPointY,
+          Pitch, Yaw, FlipX, FlipY, CropLeft, CropRight, CropTop, CropBottom, CropSoftness,
+          CropRetain, Opacity, CompositeMode, Volume, Pan, AudioSyncOffset, Speed, Reverse,
+          FreezeFrame, RetimeProcess, MotionEstimation, ResizeMode.
         Omit key to get all properties.
       set_property(key, value, ...) -> {success}
       get_duration(...) -> {duration}
@@ -2298,25 +2301,27 @@ def timeline_item(
       get_retime(...) -> {process, motion_estimation}
       set_retime(process?, motion_estimation?, ...) -> {success}
         process: "nearest" (0), "frame_blend" (2), or "optical_flow" (3)
-        motion_estimation: 0=project default, 1=standard_faster, 2=standard_better, 3=enhanced_faster, 4=enhanced_better, 5=enhanced_best, 6=speed_warp_faster
+        motion_estimation: 0=project default, 1=standard_faster, 2=standard_better,
+          3=enhanced_faster, 4=enhanced_better, 5=enhanced_best, 6=speed_warp_faster
       get_transform(...) -> {Pan, Tilt, ZoomX, ZoomY, RotationAngle, ...}
       set_transform(Pan?, Tilt?, ZoomX?, ZoomY?, RotationAngle?, AnchorPointX?, AnchorPointY?, Pitch?, Yaw?, FlipX?, FlipY?, ...) -> {success}
       get_crop(...) -> {CropLeft, CropRight, CropTop, CropBottom, CropSoftness, CropRetain}
       set_crop(CropLeft?, CropRight?, CropTop?, CropBottom?, CropSoftness?, CropRetain?, ...) -> {success}
-        All crop values: float 0.0-1.0
-        CropRetain: boolean (maintain aspect ratio)
+        All crop values: float 0.0-1.0. CropRetain: boolean.
       get_composite(...) -> {Opacity, CompositeMode}
       set_composite(Opacity?, CompositeMode?, ...) -> {success}
         Opacity: float 0.0-1.0
-        CompositeMode: "Normal", "Add", "Subtract", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "ColorDodge", "ColorBurn", "LinearDodge", "LinearBurn", "HardLight", "SoftLight", "PinLight", "VividLight", "Difference", "Exclusion", "Hue"
+        CompositeMode: Normal, Add, Subtract, Multiply, Screen, Overlay, Darken, Lighten,
+          ColorDodge, ColorBurn, LinearDodge, LinearBurn, HardLight, SoftLight, PinLight,
+          VividLight, Difference, Exclusion, Hue
       get_keyframes(property, ...) -> {property, count, keyframes}
       add_keyframe(property, frame, value, ...) -> {success}
       modify_keyframe(property, frame, new_value?, new_frame?, ...) -> {success}
       delete_keyframe(property, frame, ...) -> {success}
-      set_keyframe_interpolation(property, frame, interpolation, ...) -> {success}  — Linear, Bezier, EaseIn, EaseOut, EaseInOut
-      set_name(name) -> {success}
+      set_keyframe_interpolation(property, frame, interpolation, ...) -> {success}
+        interpolation: Linear, Bezier, EaseIn, EaseOut, EaseInOut
 
-    Prerequisites: Requires a timeline with items. Use get_track_count and get_items to discover available items.
+    Prerequisites: Requires a timeline with items. Use timeline get_items to discover track contents.
     """
     p = params or {}
     tl, item, err = _get_item(p)
@@ -3205,9 +3210,8 @@ def gallery_stills(
 
     album_index defaults to current album. still_index is 0-based.
     format for export: dpx, cin, tif, jpg, png, ppm, bmp, xpm, drx (default: dpx).
-    grab_and_export grabs a still from the current frame and exports it immediately,
-    keeping the live GalleryStill reference (more reliable than separate grab + export).
-    Requires Color page. Automatically produces a companion .drx grade file.
+    grab_and_export grabs a still from the current frame and exports it immediately. Requires Color page.
+    Prerequisites: Color page active for grab operations. Gallery album must exist.
     File data is inlined in the response (DRX as text, images as base64).
     cleanup (default true) deletes exported files from disk after inlining.
     """
@@ -3387,7 +3391,7 @@ def graph(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
       get_lut(node_index, source?, ...) -> {lut}
       set_lut(node_index, lut_path, source?, ...) -> {success}
       get_node_cache(node_index, source?, ...) -> {cache}
-      set_node_cache(node_index, cache_value, source?, ...) -> {success}
+      set_node_cache(node_index, cache_value, source?, ...) -> {success}  — cache_value: "Auto", "On", "Off"
       get_node_label(node_index, source?, ...) -> {label}
       get_tools_in_node(node_index, source?, ...) -> {tools}
       set_node_enabled(node_index, enabled, source?, ...) -> {success}
@@ -3559,13 +3563,12 @@ def color_group(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
 @mcp.tool()
 def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Fusion composition node graph operations on the currently active comp.
-
     Operates on the comp open in the Fusion page. Use timeline_item_fusion to
     manage comp lifecycle (add/delete/import/export). Use this tool to manipulate
-    the node graph inside a composition.
+    node graph inside a composition.
 
     Actions:
-      add_tool(tool_type, x?, y?, name?) -> {tool_name, tool_type}
+      add_tool(tool_type, x?, y?, name?) -> {tool_name, tool_type}  — x, y: node graph position coordinates (float)
       delete_tool(tool_name) -> {success}
       get_tool_list(type?) -> {tools, count}
       find_tool(name) -> {found, name, type, attrs}
@@ -3573,7 +3576,7 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
       disconnect(tool_name, input_name) -> {success}
       get_inputs(tool_name) -> {inputs}
       get_outputs(tool_name) -> {outputs}
-      set_input(tool_name, input_name, value, time?) -> {success}
+      set_input(tool_name, input_name, value, time?) -> {success}  — time: frame number (integer)
       get_input(tool_name, input_name, time?) -> {value}
       set_attrs(tool_name, attrs) -> {success}
       get_attrs(tool_name) -> {attrs}
@@ -3586,9 +3589,7 @@ def fusion_comp(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
       start_undo(name?) -> {success}
       end_undo(keep?) -> {success}
 
-    Common tool_type values: Merge, Background, TextPlus, Transform, Blur,
-      ColorCorrector, RectangleMask, EllipseMask, Tracker, MediaIn, MediaOut,
-      Loader, Saver, Glow, FilmGrain, CornerPositioner, DeltaKeyer, UltraKeyer
+    Common tool type values: Merge, Background, TextPlus, Transform, Blur, ColorCorrector, RectangleMask, EllipseMask, Tracker, MediaIn, MediaOut, Loader, Saver, Glow, FilmGrain, CornerPositioner, DeltaKeyer, UltraKeyer
     """
     p = params or {}
 
