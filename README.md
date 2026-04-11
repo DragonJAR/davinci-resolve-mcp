@@ -190,6 +190,54 @@ Every non-deprecated method in DaVinci Resolve Scripting API is covered. The def
 
 **70.3% methods tested live** — 319 out of 454 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed. Tested against Resolve v20.3.2.9 Studio.
 
+## Validated Capabilities {#validated-capabilities}
+
+Tested against **DaVinci Resolve Studio 20.3.2.9** (April 2026).
+
+| Category | Capability | Status | Notes |
+|----------|-----------|--------|-------|
+| **Timeline** | CRUD (create, read, update, delete) | ✅ | Via ProjectManager and Timeline methods |
+| | Timeline settings and format | ✅ | Resolution, frame rate, interlaced |
+| | Track management | ✅ | Add/delete tracks, lock/unlock, enable/disable |
+| **Clips** | Add to timeline | ✅ | AppendToTimeline() |
+| | Delete clips | ✅ | DeleteClips() with ripple support |
+| | Link/unlink clips | ✅ | SetClipsLinked() |
+| | Clip properties | ✅ | GetStart, GetEnd, GetDuration, GetProperty |
+| **Scene Detection** | Auto-detect scene cuts | ✅ | DetectSceneCuts() |
+| **Color Grading** | Read node structure | ✅ | GetNumNodes, GetNodeLabel |
+| | Get/set CDL values | ✅ | GetCDL, SetCDL (Slope, Offset, Power, Sat) |
+| | Copy grades between clips | ✅ | CopyGrades() |
+| | Color versions | ✅ | GetVersionNames, LoadVersion |
+| | LUT export | ✅ | ExportLUT() (requires Color page) |
+| **Media Pool** | Import media | ✅ | ImportMedia() |
+| | Folder navigation | ✅ | GetRootFolder, GetCurrentFolder |
+| | Clip metadata | ✅ | GetName, GetDuration, GetFrameRate |
+| **Rendering** | Render presets | ✅ | GetRenderPresetList, LoadRenderPreset |
+| | Render jobs | ✅ | AddRenderJob, GetRenderJobList |
+| | Quick export | ✅ | RenderWithQuickExport() |
+| **Transforms** | Pan, Tilt, Zoom | ✅ | SetProperty() |
+| | Crop | ✅ | SetProperty(CropLeft/Right/Top/Bottom) |
+| | Rotation, Flip | ✅ | SetProperty() |
+| | Composite mode | ✅ | SetProperty(CompositeMode) |
+| **Fusion** | Create composition | ✅ | CreateFusionClip, AddFusionComp |
+| | Import/export comps | ✅ | ImportFusionComp, ExportFusionComp |
+| **Audio** | Volume and pan | ✅ | SetProperty(Volume, Pan) |
+| | Voice isolation | ✅ | GetVoiceIsolationState, SetVoiceIsolationState |
+| | Audio sync | ✅ | Auto-sync audio to clip |
+| **Gallery** | Stills and albums | ✅ | GetStills, GetAlbums |
+| | PowerGrade LUT export | ✅ | ExportCurrentGradeAsLUT() |
+| **Markers** | Add/delete markers | ✅ | AddMarker, DeleteMarkersByColor |
+| **Subtitles** | Create from audio | ✅ | CreateSubtitlesFromAudio() |
+| | | | |
+| **NOT Available** | | | |
+| Clip split/trim | Razor blade / split at frame | ❌ | API does not expose this capability |
+| | Set clip start/end frames | ❌ | SetStart/SetEnd not functional via API |
+| | Direct timeline drawing | ❌ | No API for drawing cuts manually |
+
+> **Note:** The DaVinci Resolve Scripting API provides automation capabilities
+> but does not include frame-accurate editing features like a razor tool or
+> direct trim controls. For such operations, use DaVinci Resolve's UI directly.
+
 ## Configuration
 
 ### OpenCode
