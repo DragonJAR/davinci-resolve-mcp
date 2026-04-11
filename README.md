@@ -6,6 +6,7 @@
 [![Tested](https://img.shields.io/badge/Live%20Tested-93.3%25-green.svg)](#api-coverage)
 [![DaVinci Resolve](https://img.shields.io/badge/DaVinci%20Resolve-18.5+-darkred.svg)](https://www.blackmagicdesign.com/products/davinciresolve)
 [![Python](https://img.shields.io/badge/python-3.10--3.12-green.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A Model Context Protocol (MCP) server providing **complete coverage** of DaVinci Resolve Scripting API. Connect AI assistants (Claude, Cursor, Windsurf) to DaVinci Resolve and control your post-production workflow through natural language.
 
