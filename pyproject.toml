@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "davinci-resolve-mcp"
-version = "2.2.0"
+version = "2.2.1"
 description = "MCP server providing complete coverage of DaVinci Resolve Scripting API"
 readme = "README.md"
 license = {text = "MIT"}
