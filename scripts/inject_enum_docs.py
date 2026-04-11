@@ -10,8 +10,8 @@ Usage:
     python3 scripts/inject_enum_docs.py             # actually inject
 """
 
-import re
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -148,15 +148,7 @@ def get_enum_for_param(param_name):
 
     if "track_type" in pn:
         return "track_type"
-    if "page" in pn and (
-        "media" in pn
-        or "cut" in pn
-        or "edit" in pn
-        or "fusion" in pn
-        or "color" in pn
-        or "fairlight" in pn
-        or "deliver" in pn
-    ):
+    if "page" in pn and ("media" in pn or "cut" in pn or "edit" in pn or "fusion" in pn or "color" in pn or "fairlight" in pn or "deliver" in pn):
         return "page"
     if "color" in pn and ("marker" in pn or "flag" in pn):
         return "color"
@@ -221,7 +213,6 @@ def parse_args_section(docstring):
     params = []
     for i, line in enumerate(args_lines[1:], start=1):
         stripped = line.lstrip()
-        indent = len(line) - len(stripped)
 
         # Skip empty lines and section headers (higher indent levels)
         if not stripped or stripped.startswith(("Returns:", "Note:", "Raises:", "Valid:")):
@@ -290,11 +281,7 @@ def inject_enums_into_docstring(docstring, params_with_enums):
         new_args_lines.append(line)
 
         # Check if this is a parameter line (has "param_name: description")
-        if (
-            stripped
-            and ":" in stripped
-            and not stripped.startswith(("Args:", "Returns:", "Note:", "Raises:", "Valid:"))
-        ):
+        if stripped and ":" in stripped and not stripped.startswith(("Args:", "Returns:", "Note:", "Raises:", "Valid:")):
             colon_pos = stripped.index(":")
             param_name = stripped[:colon_pos].strip()
 

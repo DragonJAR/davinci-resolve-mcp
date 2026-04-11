@@ -9,10 +9,10 @@ Usage:
     python3 scripts/split_granular.py --restore  # restore from backup
 """
 
-import re
 import ast
-import sys
+import re
 import shutil
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -439,7 +439,7 @@ def main():
             write_module(cat, cat_tools, all_helpers, dry_run=DRY_RUN)
         except SyntaxError:
             if not DRY_RUN:
-                print(f"  ❌ Failed, restoring backup...")
+                print("  ❌ Failed, restoring backup...")
                 shutil.copy2(BACKUP_FILE, SOURCE_FILE)
             raise
 
@@ -468,10 +468,10 @@ def main():
             print(f"   ⚠️  Mismatch: expected {len(tools)}, got {total_tools}")
             # Try to fix: restore backup
             shutil.copy2(BACKUP_FILE, SOURCE_FILE)
-            print(f"   🔄 Restored backup")
+            print("   🔄 Restored backup")
             sys.exit(1)
 
-        print(f"\n🎉 Modularization complete!")
+        print("\n🎉 Modularization complete!")
         print(f"   {len(list(GRANULAR_DIR.glob('*.py'))) - 1} modules")
         print(f"   {total_tools} tools")
         print(f"   Backup: {BACKUP_FILE}")

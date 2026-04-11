@@ -186,7 +186,7 @@ def _serialize_value(value):
         return value
     if isinstance(value, dict):
         return {k: _serialize_value(v) for k, v in value.items()}
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return [_serialize_value(v) for v in value]
     # Resolve API object — return string representation
     return str(value)
@@ -381,12 +381,12 @@ def get_current_color_node() -> Dict[str, Any]:
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
 
 
-def get_current_page() -> str:
+def get_current_page() -> Dict[str, Any]:
     """Get the current page open in DaVinci Resolve (Edit, Color, Fusion, etc.)."""
     resolve = get_resolve()
     if resolve is None:
-        return "Error: Not connected to DaVinci Resolve"
-    return resolve.GetCurrentPage()
+        return {"error": "Not connected to DaVinci Resolve"}
+    return {"page": resolve.GetCurrentPage()}
 
 
 def get_current_project():
@@ -402,9 +402,9 @@ def get_current_project_name() -> str:
     """Get the name of the currently open project."""
     pm, current_project = get_current_project()
     if not current_project:
-        return "No project currently open"
+        return {"error": "No project currently open"}
 
-    return current_project.GetName()
+    return {"project_name": current_project.GetName()}
 
 
 def get_current_timeline() -> Dict[str, Any]:
@@ -568,7 +568,8 @@ def get_project_settings() -> Dict[str, Any]:
 
     try:
         # Get all settings
-        return current_project.GetSetting("")
+        all_settings = current_project.GetSetting("")
+        return _serialize_value(all_settings) if all_settings else {}
     except Exception as e:
         return {"error": f"Failed to get project settings: {str(e)}"}
 
@@ -595,12 +596,16 @@ def get_resolve():
     return resolve
 
 
-def get_resolve_version() -> str:
+def get_resolve_version() -> Dict[str, Any]:
     """Get DaVinci Resolve version information."""
     resolve = get_resolve()
     if resolve is None:
-        return "Error: Not connected to DaVinci Resolve"
-    return f"{resolve.GetProductName()} {resolve.GetVersionString()}"
+        return {"error": "Not connected to DaVinci Resolve"}
+    return {
+        "product": resolve.GetProductName(),
+        "version": resolve.GetVersion(),
+        "version_string": resolve.GetVersionString(),
+    }
 
 
 def get_superscale_settings_endpoint() -> Dict[str, Any]:
@@ -2194,7 +2199,9 @@ def get_current_database() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve"}
     pm = resolve.GetProjectManager()
     db = pm.GetCurrentDatabase()
-    return db if db else {"error": "Failed to get current database"}
+    if not db:
+        return {"error": "Failed to get current database"}
+    return {"db_type": db.get("DbType"), "db_name": db.get("DbName")}
 
 
 @mcp.tool()
@@ -2205,7 +2212,9 @@ def get_current_project_folder() -> Dict[str, Any]:
         return {"error": "Not connected to DaVinci Resolve"}
     pm = resolve.GetProjectManager()
     folder = pm.GetCurrentFolder()
-    return {"current_folder": folder}
+    if not folder:
+        return {"error": "No current folder"}
+    return {"current_folder": {"name": folder.GetName(), "id": folder.GetUniqueId()}}
 
 
 @mcp.tool()
@@ -2537,6 +2546,8 @@ def get_voice_isolation_state(track_index: int = 1) -> Dict[str, Any]:
 
     try:
         state = current_timeline.GetVoiceIsolationState(track_index)
+        if not state:
+            return {"isEnabled": False, "amount": 0}
         return _serialize_value(state)
     except Exception as e:
         return {"error": f"Failed to get voice isolation state: {str(e)}"}

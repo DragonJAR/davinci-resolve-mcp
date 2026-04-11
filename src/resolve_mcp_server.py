@@ -9,9 +9,12 @@ import sys
 
 # ── Resolve API path setup ────────────────────────────────────────
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(current_dir, "src")
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir)
+# Add project root so "from src.utils.platform import ..." works
+project_root = os.path.dirname(current_dir)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
 from src.utils.platform import get_resolve_paths
 

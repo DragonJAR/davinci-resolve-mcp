@@ -19,13 +19,21 @@ Requirements:
     - Optional: path to a media file to import
 """
 
-import sys
 import os
+import sys
 
-# Add Resolve API Modules to path
-RESOLVE_API_PATH = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
-if RESOLVE_API_PATH not in sys.path:
-    sys.path.insert(0, RESOLVE_API_PATH)
+# Add Resolve API Modules to path using platform-specific paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(current_dir, "..", "src")
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+from src.utils.platform import get_resolve_paths
+
+paths = get_resolve_paths()
+RESOLVE_MODULES_PATH = paths["modules_path"]
+if RESOLVE_MODULES_PATH not in sys.path:
+    sys.path.insert(0, RESOLVE_MODULES_PATH)
 
 
 def connect_to_resolve():
@@ -48,6 +56,9 @@ def connect_to_resolve():
 def navigate_media_pool(resolve):
     """Navigate and display the media pool structure."""
     pm = resolve.GetProjectManager()
+    if not pm:
+        print("✗ Failed to get ProjectManager")
+        return None, None
     proj = pm.GetCurrentProject()
 
     if not proj:
@@ -62,7 +73,7 @@ def navigate_media_pool(resolve):
     root_folder = mp.GetRootFolder()
     current_folder = mp.GetCurrentFolder()
 
-    print(f"\n✓ Media Pool")
+    print("\n✓ Media Pool")
     print(f"  Root: {root_folder.GetName()}")
     print(f"  Current: {current_folder.GetName()}")
 
@@ -82,8 +93,8 @@ def list_clips_in_folder(mp):
 
     for i, clip in enumerate(clips):
         name = clip.GetName()
-        duration = clip.GetDuration()
-        fps = clip.GetFrameRate()
+        duration = clip.GetClipProperty("Duration")
+        fps = clip.GetClipProperty("FPS")
         print(f"    [{i + 1}] {name} ({duration} frames @ {fps}fps)")
 
     return clips
@@ -115,7 +126,7 @@ def add_clip_to_timeline(mp, clip):
     result = mp.AppendToTimeline([clip])
 
     if result:
-        print(f"  ✓ Added successfully")
+        print("  ✓ Added successfully")
         # Result is list of TimelineItems
         for item in result:
             print(f"    TimelineItem: {item.GetName()} at frame {item.GetStart()}")

@@ -180,7 +180,7 @@ def _serialize_value(value):
         return value
     if isinstance(value, dict):
         return {k: _serialize_value(v) for k, v in value.items()}
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return [_serialize_value(v) for v in value]
     # Resolve API object — return string representation
     return str(value)
@@ -375,12 +375,12 @@ def get_current_color_node() -> Dict[str, Any]:
     return "Error: This function uses deprecated api/ module that has been removed. Use the compound server (server.py) instead."
 
 
-def get_current_page() -> str:
+def get_current_page() -> Dict[str, Any]:
     """Get the current page open in DaVinci Resolve (Edit, Color, Fusion, etc.)."""
     resolve = get_resolve()
     if resolve is None:
-        return "Error: Not connected to DaVinci Resolve"
-    return resolve.GetCurrentPage()
+        return {"error": "Not connected to DaVinci Resolve"}
+    return {"page": resolve.GetCurrentPage()}
 
 
 def get_current_project():
@@ -392,13 +392,13 @@ def get_current_project():
     return pm, proj
 
 
-def get_current_project_name() -> str:
+def get_current_project_name() -> Dict[str, Any]:
     """Get the name of the currently open project."""
     pm, current_project = get_current_project()
     if not current_project:
-        return "No project currently open"
+        return {"error": "No project currently open"}
 
-    return current_project.GetName()
+    return {"project_name": current_project.GetName()}
 
 
 def get_current_timeline() -> Dict[str, Any]:
@@ -589,12 +589,16 @@ def get_resolve():
     return resolve
 
 
-def get_resolve_version() -> str:
+def get_resolve_version() -> Dict[str, Any]:
     """Get DaVinci Resolve version information."""
     resolve = get_resolve()
     if resolve is None:
-        return "Error: Not connected to DaVinci Resolve"
-    return f"{resolve.GetProductName()} {resolve.GetVersionString()}"
+        return {"error": "Not connected to DaVinci Resolve"}
+    return {
+        "product": resolve.GetProductName(),
+        "version": resolve.GetVersion(),
+        "version_string": resolve.GetVersionString(),
+    }
 
 
 def get_superscale_settings_endpoint() -> Dict[str, Any]:

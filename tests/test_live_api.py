@@ -1,11 +1,22 @@
 """Live API validation tests — require DaVinci Resolve running."""
 
+import os
 import sys
 
 import pytest
 
-RESOLVE_MODULES = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
-sys.path.insert(0, RESOLVE_MODULES)
+# Add Resolve API Modules to path using platform-specific paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(current_dir, "..", "src")
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+from src.utils.platform import get_resolve_paths
+
+paths = get_resolve_paths()
+RESOLVE_MODULES_PATH = paths["modules_path"]
+if RESOLVE_MODULES_PATH not in sys.path:
+    sys.path.insert(0, RESOLVE_MODULES_PATH)
 
 
 def _resolve_available():

@@ -18,6 +18,19 @@ from typing import Any, Dict
 # Configure logging
 logger = logging.getLogger("davinci-resolve-mcp.app_control")
 
+# ── DaVinci Resolve Scripting API (lazy import) ────────────────────
+# All granular modules import this as `dvr_script` to call
+# `dvr_script.scriptapp("Resolve")` for connecting to Resolve.
+dvr_script = None
+
+try:
+    import DaVinciResolveScript  # noqa: F401
+
+    dvr_script = DaVinciResolveScript
+    logger.info("DaVinciResolveScript module loaded")
+except ImportError as e:
+    logger.error(f"Cannot import DaVinciResolveScript: {e}")
+
 
 def quit_resolve_app(resolve_obj, force: bool = False, save_project: bool = True) -> bool:
     """

@@ -19,13 +19,21 @@ Requirements:
     - A project open with at least one timeline
 """
 
-import sys
 import os
+import sys
 
-# Add Resolve API Modules to path
-RESOLVE_API_PATH = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
-if RESOLVE_API_PATH not in sys.path:
-    sys.path.insert(0, RESOLVE_API_PATH)
+# Add Resolve API Modules to path using platform-specific paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(current_dir, "..", "src")
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+from src.utils.platform import get_resolve_paths
+
+paths = get_resolve_paths()
+RESOLVE_MODULES_PATH = paths["modules_path"]
+if RESOLVE_MODULES_PATH not in sys.path:
+    sys.path.insert(0, RESOLVE_MODULES_PATH)
 
 
 def connect_to_resolve():
@@ -49,6 +57,9 @@ def connect_to_resolve():
 def list_timelines(resolve):
     """List all timelines in the current project."""
     pm = resolve.GetProjectManager()
+    if not pm:
+        print("✗ Failed to get ProjectManager")
+        return []
     proj = pm.GetCurrentProject()
 
     if not proj:
@@ -74,7 +85,13 @@ def list_timelines(resolve):
 def get_current_timeline_info(resolve):
     """Get detailed info about the current timeline."""
     pm = resolve.GetProjectManager()
+    if not pm:
+        print("✗ Failed to get ProjectManager")
+        return
     proj = pm.GetCurrentProject()
+    if not proj:
+        print("✗ No project open")
+        return
     tl = proj.GetCurrentTimeline()
 
     if not tl:
@@ -97,13 +114,19 @@ def get_current_timeline_info(resolve):
 def get_clip_positions(resolve):
     """Read clip positions from the current timeline."""
     pm = resolve.GetProjectManager()
+    if not pm:
+        print("✗ Failed to get ProjectManager")
+        return
     proj = pm.GetCurrentProject()
+    if not proj:
+        print("✗ No project open")
+        return
     tl = proj.GetCurrentTimeline()
 
     if not tl:
         return
 
-    print(f"\n✓ Clip Positions (Video Track 1):")
+    print("\n✓ Clip Positions (Video Track 1):")
 
     items = tl.GetItemListInTrack("video", 1)
 
@@ -130,13 +153,19 @@ def get_clip_positions(resolve):
 def get_track_info(resolve):
     """Get information about all tracks."""
     pm = resolve.GetProjectManager()
+    if not pm:
+        print("✗ Failed to get ProjectManager")
+        return
     proj = pm.GetCurrentProject()
+    if not proj:
+        print("✗ No project open")
+        return
     tl = proj.GetCurrentTimeline()
 
     if not tl:
         return
 
-    print(f"\n✓ Track Information:")
+    print("\n✓ Track Information:")
 
     for track_type in ["video", "audio", "subtitle"]:
         count = tl.GetTrackCount(track_type)

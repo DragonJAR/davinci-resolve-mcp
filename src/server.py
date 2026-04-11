@@ -799,9 +799,13 @@ def project_manager_folders(action: str, params: Optional[Dict[str, Any]] = None
     # NOTE: Resolve API has alternative method names:
     #   GetFolderListInCurrentFolder = GetFolderList (alias)
     if action == "list":
-        return {"folders": pm.GetFolderListInCurrentFolder()}
+        folders = pm.GetFolderListInCurrentFolder() or []
+        return {"folders": [{"name": f.GetName(), "id": f.GetUniqueId()} for f in folders]}
     elif action == "get_current":
-        return {"folder": pm.GetCurrentFolder()}
+        folder = pm.GetCurrentFolder()
+        if not folder:
+            return _err("No current folder")
+        return {"folder": {"name": folder.GetName(), "id": folder.GetUniqueId()}}
     elif action == "create":
         return {"success": bool(pm.CreateFolder(p["name"]))}
     elif action == "delete":
@@ -874,7 +878,10 @@ def project_manager_database(action: str, params: Optional[Dict[str, Any]] = Non
     # NOTE: Resolve API has alternative method names:
     #   GetDatabaseList = GetDatabases (alias)
     if action == "get_current":
-        return pm.GetCurrentDatabase()
+        db = pm.GetCurrentDatabase()
+        if not db:
+            return _err("Failed to get current database")
+        return {"db_type": db.get("DbType"), "db_name": db.get("DbName")}
     elif action == "list":
         return {"databases": pm.GetDatabaseList()}
     elif action == "set_current":
@@ -894,7 +901,7 @@ def project_settings(action: str, params: Optional[Dict[str, Any]] = None) -> Di
     Actions:
       get_name() -> {name}
       set_name(name) -> {success}
-       get_setting(name?) -> {settings}  — omit name to get ALL settings as a dict; otherwise set individual setting (name must match valid Resolve setting key)
+       get_setting(name) -> {settings}  — get individual setting (name must match valid Resolve setting key)
       set_setting(name, value) -> {success}
       get_unique_id() -> {id}
       get_presets() -> {presets}
@@ -907,6 +914,7 @@ def project_settings(action: str, params: Optional[Dict[str, Any]] = None) -> Di
       get_color_groups() -> {groups}
       add_color_group(name) -> {success, name}
       delete_color_group(name) -> {success}
+      apply_fairlight_preset(preset_name) -> {success}
     """
     p = params or {}
     _, proj, err = _check()
@@ -1070,6 +1078,8 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
         return {"resolutions": _ser(proj.GetRenderResolutions(p["format"], p["codec"]))}
     elif action == "set_settings":
         return {"success": bool(proj.SetRenderSettings(p["settings"]))}
+    elif action == "get_settings":
+        return {"settings": _ser(proj.GetRenderSettings())}
     elif action == "list_presets":
         return {"presets": proj.GetRenderPresetList()}
     elif action == "load_preset":
@@ -1100,6 +1110,7 @@ def render(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, An
             "get_mode",
             "set_mode",
             "get_resolutions",
+            "get_settings",
             "set_settings",
             "list_presets",
             "load_preset",
@@ -1596,6 +1607,10 @@ def media_pool_item_markers(action: str, params: Optional[Dict[str, Any]] = None
       add_flag(clip_id, color) -> {success}
       get_flags(clip_id) -> {flags}
       clear_flags(clip_id, color) -> {success}
+      set_name(name) -> {success}
+      link_full_resolution_media() -> {success}
+      monitor_growing_file() -> {success}
+      replace_clip_preserve_sub_clip(media_pool_item?, clip_id?) -> {success}
 
     Marker color values: "Blue", "Cyan", "Green", "Yellow", "Red", "Pink", "Purple", "Fuchsia", "Rose", "Lavender", "SkyBlue", "Mint", "Lemon", "Sand", "Cocoa", "Cream"
     """
@@ -1835,17 +1850,25 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
     elif action == "create_compound_clip":
         ids_set = set(p["clip_ids"])
         found = []
-        for it in tl.GetItemListInTrack("video", 1) or []:
-            if it.GetUniqueId() in ids_set:
-                found.append(it)
+        for tt in ["video", "audio", "subtitle"]:
+            for ti in range(1, (tl.GetTrackCount(tt) or 0) + 1):
+                for it in tl.GetItemListInTrack(tt, ti) or []:
+                    if it.GetUniqueId() in ids_set:
+                        found.append(it)
+        if not found:
+            return _err("None of the provided clip IDs were found in the timeline")
         result = tl.CreateCompoundClip(found, p.get("info", {}))
         return _ok() if result else _err("Failed to create compound clip")
     elif action == "create_fusion_clip":
         ids_set = set(p["clip_ids"])
         found = []
-        for it in tl.GetItemListInTrack("video", 1) or []:
-            if it.GetUniqueId() in ids_set:
-                found.append(it)
+        for tt in ["video", "audio", "subtitle"]:
+            for ti in range(1, (tl.GetTrackCount(tt) or 0) + 1):
+                for it in tl.GetItemListInTrack(tt, ti) or []:
+                    if it.GetUniqueId() in ids_set:
+                        found.append(it)
+        if not found:
+            return _err("None of the provided clip IDs were found in the timeline")
         result = tl.CreateFusionClip(found)
         return _ok() if result else _err("Failed to create Fusion clip")
     elif action == "import_into_timeline":
@@ -1895,7 +1918,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
     elif action == "convert_to_stereo":
         return {"success": bool(tl.ConvertTimelineToStereo())}
     # ── v20.3 New Methods ──
-    elif action == "get_items_in_track":
+    elif action == "get_items":
         items = tl.GetItemsInTrack(p["track_type"], p["track_index"])
         return {"items": _ser(items)}
     elif action == "get_voice_isolation_state":
@@ -1948,7 +1971,7 @@ def timeline(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, 
             "set_mark_in_out",
             "clear_mark_in_out",
             "convert_to_stereo",
-            "get_items_in_track",
+            "get_items",
             "get_voice_isolation_state",
             "set_voice_isolation_state",
         ],
@@ -2106,6 +2129,7 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
 
     Actions:
       get_name(track_type?, track_index?, item_index?) -> {name}
+      set_name(name, ...) -> {success}
       get_property(key?, ...) -> {properties}
         Valid property keys: Pan, Tilt, ZoomX, ZoomY, RotationAngle, AnchorPointX, AnchorPointY,
           Pitch, Yaw, FlipX, FlipY, CropLeft, CropRight, CropTop, CropBottom, CropSoftness,
@@ -2249,7 +2273,11 @@ def timeline_item(action: str, params: Optional[Dict[str, Any]] = None) -> Dict[
         return {"items": [{"name": it.GetName(), "id": it.GetUniqueId()} for it in linked]}
     elif action == "get_track_type_and_index":
         result = item.GetTrackTypeAndIndex()
-        return {"track_type": result[0], "track_index": result[1]} if result else _err("Failed")
+        if not result:
+            return _err("Failed to get track type and index")
+        if not isinstance(result, (tuple, list)) or len(result) < 2:
+            return _err(f"Unexpected return type from GetTrackTypeAndIndex: {type(result).__name__}")
+        return {"track_type": result[0], "track_index": result[1]}
     elif action == "get_source_audio_mapping":
         return {"mapping": item.GetSourceAudioChannelMapping()}
     elif action == "load_burnin_preset":

@@ -19,13 +19,21 @@ Requirements:
     - A project open with clips on the timeline
 """
 
-import sys
 import os
+import sys
 
-# Add Resolve API Modules to path
-RESOLVE_API_PATH = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
-if RESOLVE_API_PATH not in sys.path:
-    sys.path.insert(0, RESOLVE_API_PATH)
+# Add Resolve API Modules to path using platform-specific paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(current_dir, "..", "src")
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+from src.utils.platform import get_resolve_paths
+
+paths = get_resolve_paths()
+RESOLVE_MODULES_PATH = paths["modules_path"]
+if RESOLVE_MODULES_PATH not in sys.path:
+    sys.path.insert(0, RESOLVE_MODULES_PATH)
 
 
 def connect_to_resolve():
@@ -48,6 +56,9 @@ def connect_to_resolve():
 def get_timeline_items(resolve):
     """Get all timeline items from video track 1."""
     pm = resolve.GetProjectManager()
+    if not pm:
+        print("✗ Failed to get ProjectManager")
+        return None, None, []
     proj = pm.GetCurrentProject()
 
     if not proj:
