@@ -1,52 +1,54 @@
 # DaVinci Resolve MCP Server
 
-> **Español**: Esta documentación está disponible en español. **[Leer README en español](./README.es.md)**
+> **English**: This documentation is available in English. **[Read README in English](./README.en.md)**
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/DragonJAR/davinci-resolve-mcp/releases)
-[![API Coverage](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#api-coverage)
-[![Tools](https://img.shields.io/badge/MCP%20Tools-28%20(356%20full)-blue.svg)](#server-modes)
-[![Tested](https://img.shields.io/badge/Live%20Tested-93.3%25-green.svg)](#api-coverage)
+---
+
+[![Versión](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/DragonJAR/davinci-resolve-mcp/releases)
+[![Cobertura API](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#api-coverage)
+[![Herramientas](https://img.shields.io/badge/MCP%20Tools-28%20(356%20completas)-blue.svg)](#server-modes)
+[![Probado](https://img.shields.io/badge/Live%20Tested-93.3%25-green.svg)](#api-coverage)
 [![DaVinci Resolve](https://img.shields.io/badge/DaVinci%20Resolve-18.5+-darkred.svg)](https://www.blackmagicdesign.com/products/davinciresolve)
 [![Python](https://img.shields.io/badge/python-3.10--3.12-green.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Licencia](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A Model Context Protocol (MCP) server providing **complete coverage** of DaVinci Resolve Scripting API. Connect AI assistants (Claude, Cursor, Windsurf) to DaVinci Resolve and control your post-production workflow through natural language.
+Un servidor MCP (Model Context Protocol) que proporciona **cobertura completa** de la API de Scripting de DaVinci Resolve. Conecta asistentes de IA (Claude, Cursor, Windsurf) a DaVinci Resolve y controla tu flujo de trabajo de post-producción con lenguaje natural.
 
-## Quick Start
+## Inicio Rápido
 
 ```bash
-# Clone the repository
+# Clonar el repositorio
 git clone https://github.com/DragonJAR/davinci-resolve-mcp.git
 cd davinci-resolve-mcp
 
-# Run the installer (requires Resolve to be running)
+# Ejecutar el instalador (requiere que Resolve esté abierto)
 python install.py
 ```
 
-The universal installer auto-detects your platform, finds your DaVinci Resolve installation, creates a virtual environment, and configures your MCP client — all in one step.
+El instalador universal detecta automáticamente tu plataforma, encuentra tu instalación de DaVinci Resolve, crea un entorno virtual y configura tu cliente MCP — todo en un solo paso.
 
-## Installation
+## Requisitos Previos
 
-### Prerequisites
+- **DaVinci Resolve Studio** 18.5+ (macOS, Windows o Linux) — la versión gratuita no soporta scripting externo
+- **Python 3.10–3.12** recomendado (3.13+ puede tener incompatibilidades ABI con la librería de scripting de Resolve)
+- DaVinci Resolve abierto con **Preferencias > General > "Scripting externo usando"** configurado en **Local**
 
-- **DaVinci Resolve Studio** 18.5+ (macOS, Windows, or Linux) — free edition does not support external scripting
-- **Python 3.10–3.12** recommended (3.13+ may have ABI incompatibilities with Resolve's scripting library)
-- DaVinci Resolve running with **Preferences > General > "External scripting using"** set to **Local**
+## Instalación
 
-### Option A: Interactive Installer (Recommended)
+### Opción A: Instalador Interactivo (Recomendado)
 
 ```bash
-python install.py                              # Interactive mode
-python install.py --clients all                # Configure all clients
-python install.py --clients opencode,cursor,claude-desktop  # Specific clients
-python install.py --clients manual             # Just print config
-python install.py --dry-run --clients all      # Preview without writing
-python install.py --no-venv --clients cursor   # Skip venv creation
+python install.py                              # Modo interactivo
+python install.py --clients all                # Configurar todos los clientes
+python install.py --clients opencode,cursor,claude-desktop  # Clientes específicos
+python install.py --clients manual             # Solo mostrar config
+python install.py --dry-run --clients all      # Vista previa sin escribir
+python install.py --no-venv --clients cursor   # Saltar creación de venv
 ```
 
-### Option B: Manual Setup
+### Opción B: Configuración Manual
 
-Add to your MCP client config. Choose your client format below.
+Agregá esto en la configuración de tu cliente MCP:
 
 **OpenCode:**
 ```json
@@ -55,501 +57,218 @@ Add to your MCP client config. Choose your client format below.
   "mcp": {
     "davinci-resolve": {
       "type": "local",
-      "command": ["/path/to/python", "/path/to/server.py"],
+      "command": ["/ruta/al/python", "/ruta/al/server.py"],
       "enabled": true,
       "environment": {
-        "RESOLVE_SCRIPT_API": "/path/to/resolve/api",
-        "PYTHONPATH": "/path/to/resolve/api/Modules"
+        "RESOLVE_SCRIPT_API": "/ruta/al/resolve/api",
+        "PYTHONPATH": "/ruta/al/resolve/api/Modules"
       }
     }
   }
 }
 ```
 
-**Standard MCP clients (Claude Desktop, Cursor, Windsurf, VS Code, Zed):**
+**Clientes MCP estándar (Claude Desktop, Cursor, Windsurf, VS Code, Zed):**
 ```json
 {
   "mcpServers": {
     "davinci-resolve": {
-      "command": "/path/to/venv/bin/python",
-      "args": ["/path/to/davinci-resolve-mcp/src/server.py"]
+      "command": "/ruta/al/venv/bin/python",
+      "args": ["/ruta/al/davinci-resolve-mcp/src/server.py"]
     }
   }
 }
 ```
 
-Platform-specific paths:
+## Clientes MCP Soportados
 
-| Platform | API Path | Library Path |
-|----------|----------|-------------|
-| macOS | `/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting` | `fusionscript.so` in DaVinci Resolve.app |
-| Windows | `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting` | `fusionscript.dll` in Resolve install dir |
-| Linux | `/opt/resolve/Developer/Scripting` | `/opt/resolve/libs/Fusion/fusionscript.so` |
+El instalador puede configurar automáticamente:
 
-### Environment Variables
-
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `RESOLVE_SCRIPT_API` | Path to Resolve API directory | Auto-set by installer |
-| `PYTHONPATH` | Path to Resolve API Modules | Auto-set by installer |
-| `RESOLVE_SCRIPT_LIB` | Path to Resolve library (Windows/Linux) | Auto-set by installer |
-
-## Supported MCP Clients
-
-The installer can automatically configure any of these clients:
-
-| Client | Config Location | Auto-Install |
-|--------|----------------|--------------|
-| OpenCode | `~/.config/opencode/opencode.json` (global) or `opencode.json` (project root) | ✅ |
-| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) | ✅ |
-| Claude Code | `.mcp.json` (project root) | ✅ |
+| Cliente | Ubicación de Config | Auto-Instalación |
+|---------|---------------------|------------------|
+| OpenCode | `~/.config/opencode/opencode.json` | ✅ |
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` | ✅ |
+| Claude Code | `.mcp.json` (raíz del proyecto) | ✅ |
 | Cursor | `~/.cursor/mcp.json` | ✅ |
 | VS Code (Copilot) | `.vscode/mcp.json` (workspace) | ✅ |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` | ✅ |
-| Cline | VS Code global storage | ✅ |
-| Roo Code | VS Code global storage | ✅ |
 | Zed | `~/.config/zed/settings.json` | ✅ |
 | Continue | `~/.continue/config.json` | ✅ |
-| JetBrains IDEs | Manual (Settings > Tools > AI Assistant > MCP) | ❌ |
 
-You can configure multiple clients at once, or use `--clients manual` to get copy-paste config snippets.
+## Modos del Servidor
 
-## Server Modes
+El servidor MCP viene en dos modos:
 
-The MCP server comes in two modes:
+| Modo | Archivo | Herramientas | Caso de Uso |
+|------|---------|--------------|-------------|
+| **Compound** (default) | `src/server.py` | 28 | La mayoría — rápido, limpio, bajo uso de contexto |
+| **Full** | `src/resolve_mcp_server.py` | 356 | Usuarios avanzados que quieren una herramienta por método API |
 
-| Mode | File | Tools | Use Case |
-|------|------|-------|----------|
-| **Compound** (default) | `src/server.py` | 28 | Most users — fast, clean, low context usage |
-| **Full** | `src/resolve_mcp_server.py` | 356 | Power users who want one tool per API method |
-
-To use the full server:
+Para usar el servidor completo:
 ```bash
-python src/server.py --full    # Launch full 356-tool server
-# Or point your MCP config directly at src/resolve_mcp_server.py
+python src/server.py --full    # Lanzar servidor con 356 herramientas
 ```
 
-## Tools Overview
+## Cobertura API
 
-### Project Management
+Cada método no-deprecated en la API de Scripting de DaVinci Resolve está cubierto. El servidor compound por defecto expone **28 herramientas** que agrupan operaciones relacionadas. El servidor granular completo provee **356 herramientas individuales**.
 
-**Tools:** `project_manager`, `project_settings`, `media_storage`, `media_pool`, `folder`, `project_manager_folders`, `project_manager_cloud`, `project_manager_database`
-
-Create, open, save, and delete projects. Import/export projects (.drp), archive/restore, manage databases and cloud projects. Browse media storage volumes, import media files, organize folders and clips in the Media Pool.
-
-### Timeline & Editing
-
-**Tools:** `timeline`, `timeline_markers`, `timeline_item`, `timeline_item_markers`, `timeline_item_takes`
-
-Manage timelines (create, delete, duplicate), tracks (add, delete, lock/unlock), and timeline items (delete, link, move). Add markers, manage in/out points, handle takes for multi-cam edits. Export timelines as EDL/XML/AAF.
-
-### Media & Color
-
-**Tools:** `media_pool_item`, `media_pool_item_markers`, `graph`, `color_group`, `timeline_item_color`
-
-Access clip metadata, properties, and markers. Set clip colors and flags. Manage node graphs, LUTs, and cache settings. Create and manage color groups. Apply grades from DRX files, CDL values, and AI tools (Magic Mask, Smart Reframe, Stabilize).
-
-### Fusion
-
-**Tools:** `fusion_comp`, `timeline_item_fusion`
-
-Full Fusion composition node graph API. Add/delete/find nodes, wire connections, set/get parameters, manage keyframes, control undo grouping, set render ranges. Manage Fusion compositions and output cache on timeline items.
-
-### Rendering
-
-**Tools:** `render`, `render_presets`
-
-Render pipeline management: add/delete jobs, start/stop rendering, check status. Manage render formats, codecs, resolutions, and presets. Quick export for fast renders. Import/export render and burn-in presets.
-
-### Other
-
-**Tools:** `resolve_control`, `resolve_constants`, `gallery`, `gallery_stills`, `layout_presets`, `timeline_ai`
-
-App-level operations (get version, switch pages, quit). API constants reference (22 categories, 152 constants). Gallery and still management with export/import. UI layout preset save/load/import/export/delete. AI/ML features: create subtitles from audio, detect scene cuts, analyze Dolby Vision.
-
-## API Coverage
-
-Every non-deprecated method in DaVinci Resolve Scripting API is covered. The default compound server exposes **28 tools** that group related operations by action parameter. The full granular server provides **356 individual tools** for power users. The FusionComp class has 83 low-level methods; MCP server exposes the most useful 20+ for node graph operations.
-
-| Class | Methods | Tools | Description |
-|-------|---------|-------|-------------|
-| Resolve | 24 | 24 | App control, pages, layout presets, render/burn-in presets, keyframe mode |
-| ProjectManager | 29 | 29 | Project CRUD, folders, databases, cloud projects, archive/restore |
-| Project | 47 | 47 | Timelines, render pipeline, settings, LUTs, color groups |
-| MediaStorage | 12 | 12 | Volumes, file browsing, media import, mattes |
-| MediaPool | 28 | 28 | Folders, clips, timelines, metadata, stereo, sync |
-| Folder | 11 | 11 | Clip listing, export, transcription |
-| MediaPoolItem | 38 | 38 | Metadata, markers, flags, properties, proxy, transcription |
-| Timeline | 60 | 60 | Tracks, markers, items, export, generators, titles, stills, stereo |
-| TimelineItem | 88 | 88 | Properties, markers, Fusion comps, versions, takes, CDL, AI tools |
+| Clase | Métodos | Herramientas | Descripción |
+|-------|---------|--------------|-------------|
+| Resolve | 24 | 24 | Control de app, páginas, presets de layout, render |
+| ProjectManager | 29 | 29 | CRUD de proyectos, carpetas, databases, cloud |
+| Project | 47 | 47 | Timelines, render pipeline, settings, LUTs |
+| MediaStorage | 12 | 12 | Volúmenes, browsing de archivos, import |
+| MediaPool | 28 | 28 | Carpetas, clips, timelines, metadata |
+| Folder | 11 | 11 | Listado de clips, export, transcripción |
+| MediaPoolItem | 38 | 38 | Metadata, markers, flags, properties |
+| Timeline | 60 | 60 | Tracks, markers, items, export, generators |
+| TimelineItem | 88 | 88 | Properties, Fusion comps, versions, CDL, AI |
 | Gallery | 9 | 9 | Albums, stills, power grades |
-| GalleryStillAlbum | 7 | 7 | Stills management, import/export, labels |
-| Graph | 12 | 12 | Node operations, LUTs, cache, grades (timeline + clip graph variants) |
-| ColorGroup | 6 | 6 | Group management, pre/post clip node graphs |
-| FusionComp | 83 | ~20 | Full Fusion composition node graph API (83 low-level methods, most useful 20+ exposed) |
+| Graph | 12 | 12 | Node operations, LUTs, cache, grades |
+| FusionComp | 83 | ~20 | Full Fusion node graph API |
 | **Total** | **454** | **356** | |
 
-### Test Results
+## Capacidades Validadas {#validated-capabilities}
 
-**70.3% methods tested live** — 319 out of 454 API methods validated against DaVinci Resolve Studio v20.3.2.9 with 100% pass rate. All 22 v20.3 new methods tested and confirmed. Tested against Resolve v20.3.2.9 Studio.
+Probado contra **DaVinci Resolve Studio 20.3.2.9** (Abril 2026).
 
-## Validated Capabilities {#validated-capabilities}
-
-Tested against **DaVinci Resolve Studio 20.3.2.9** (April 2026).
-
-| Category | Capability | Status | Notes |
-|----------|-----------|--------|-------|
-| **Timeline** | CRUD (create, read, update, delete) | ✅ | Via ProjectManager and Timeline methods |
-| | Timeline settings and format | ✅ | Resolution, frame rate, interlaced |
-| | Track management | ✅ | Add/delete tracks, lock/unlock, enable/disable |
-| **Clips** | Add to timeline | ✅ | AppendToTimeline() |
-| | Delete clips | ✅ | DeleteClips() with ripple support |
+| Categoría | Capacidad | Estado | Notas |
+|-----------|-----------|--------|-------|
+| **Timeline** | CRUD (crear, leer, actualizar, borrar) | ✅ | Via ProjectManager y Timeline |
+| | Settings y formato de timeline | ✅ | Resolución, frame rate, entrelazado |
+| | Gestión de tracks | ✅ | Agregar/borrar tracks, lock/unlock |
+| **Clips** | Agregar al timeline | ✅ | AppendToTimeline() |
+| | Borrar clips | ✅ | DeleteClips() con soporte ripple |
 | | Link/unlink clips | ✅ | SetClipsLinked() |
-| | Clip properties | ✅ | GetStart, GetEnd, GetDuration, GetProperty |
-| **Scene Detection** | Auto-detect scene cuts | ✅ | DetectSceneCuts() |
-| **Color Grading** | Read node structure | ✅ | GetNumNodes, GetNodeLabel |
-| | Get/set CDL values | ✅ | GetCDL, SetCDL (Slope, Offset, Power, Sat) |
-| | Copy grades between clips | ✅ | CopyGrades() |
-| | Color versions | ✅ | GetVersionNames, LoadVersion |
-| | LUT export | ✅ | ExportLUT() (requires Color page) |
-| **Media Pool** | Import media | ✅ | ImportMedia() |
-| | Folder navigation | ✅ | GetRootFolder, GetCurrentFolder |
-| | Clip metadata | ✅ | GetName, GetDuration, GetFrameRate |
-| **Rendering** | Render presets | ✅ | GetRenderPresetList, LoadRenderPreset |
+| | Propiedades de clip | ✅ | GetStart, GetEnd, GetDuration |
+| **Detección de Escena** | Auto-detectar cortes de escena | ✅ | DetectSceneCuts() |
+| **Color** | Leer estructura de nodos | ✅ | GetNumNodes, GetNodeLabel |
+| | Get/set valores CDL | ✅ | GetCDL, SetCDL (Slope, Offset, Power, Sat) |
+| | Copiar grades entre clips | ✅ | CopyGrades() |
+| | Versiones de color | ✅ | GetVersionNames, LoadVersion |
+| | Exportar LUT | ✅ | ExportLUT() (requiere página Color) |
+| **Media Pool** | Importar media | ✅ | ImportMedia() |
+| | Navegación de carpetas | ✅ | GetRootFolder, GetCurrentFolder |
+| | Metadata de clips | ✅ | GetName, GetDuration, GetFrameRate |
+| **Render** | Render presets | ✅ | GetRenderPresetList, LoadRenderPreset |
 | | Render jobs | ✅ | AddRenderJob, GetRenderJobList |
 | | Quick export | ✅ | RenderWithQuickExport() |
 | **Transforms** | Pan, Tilt, Zoom | ✅ | SetProperty() |
 | | Crop | ✅ | SetProperty(CropLeft/Right/Top/Bottom) |
-| | Rotation, Flip | ✅ | SetProperty() |
-| | Composite mode | ✅ | SetProperty(CompositeMode) |
-| **Fusion** | Create composition | ✅ | CreateFusionClip, AddFusionComp |
-| | Import/export comps | ✅ | ImportFusionComp, ExportFusionComp |
-| **Audio** | Volume and pan | ✅ | SetProperty(Volume, Pan) |
+| | Rotación, Flip | ✅ | SetProperty() |
+| | Modo composite | ✅ | SetProperty(CompositeMode) |
+| **Fusion** | Crear composición | ✅ | CreateFusionClip, AddFusionComp |
+| | Import/export composiciones | ✅ | ImportFusionComp, ExportFusionComp |
+| **Audio** | Volumen y pan | ✅ | SetProperty(Volume, Pan) |
 | | Voice isolation | ✅ | GetVoiceIsolationState, SetVoiceIsolationState |
-| | Audio sync | ✅ | Auto-sync audio to clip |
-| **Gallery** | Stills and albums | ✅ | GetStills, GetAlbums |
-| | PowerGrade LUT export | ✅ | ExportCurrentGradeAsLUT() |
-| **Markers** | Add/delete markers | ✅ | AddMarker, DeleteMarkersByColor |
-| **Subtitles** | Create from audio | ✅ | CreateSubtitlesFromAudio() |
+| | Sync de audio | ✅ | Auto-sync audio a clip |
+| **Gallery** | Stills y albums | ✅ | GetStills, GetAlbums |
+| | Exportar PowerGrade LUT | ✅ | ExportCurrentGradeAsLUT() |
+| **Markers** | Agregar/borrar markers | ✅ | AddMarker, DeleteMarkersByColor |
+| **Subtítulos** | Crear desde audio | ✅ | CreateSubtitlesFromAudio() |
 | | | | |
-| **NOT Available** | | | |
-| Clip split/trim | Razor blade / split at frame | ❌ | API does not expose this capability |
-| | Set clip start/end frames | ❌ | SetStart/SetEnd not functional via API |
-| | Direct timeline drawing | ❌ | No API for drawing cuts manually |
+| **NO Disponible** | | | |
+| Clip split/trim | Razor blade / split por frame | ❌ | API no expone esta capacidad |
+| | Set inicio/fin de clip | ❌ | SetStart/SetEnd no funcional via API |
+| | Dibujo directo en timeline | ❌ | No hay API para dibujar cortes |
 
-> **Note:** The DaVinci Resolve Scripting API provides automation capabilities
-> but does not include frame-accurate editing features like a razor tool or
-> direct trim controls. For such operations, use DaVinci Resolve's UI directly.
+> **Nota:** La API de Scripting de DaVinci Resolve provee capacidades de automatización
+> pero no incluye características de edición frame-by-frame como razor tool o
+> controles de trim directos. Para estas operaciones, usar la UI de DaVinci Resolve directamente.
 
-## Configuration
+## Ejemplos de Uso
 
-### OpenCode
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "davinci-resolve": {
-      "type": "local",
-      "command": ["/path/to/venv/bin/python", "/path/to/davinci-resolve-mcp/src/server.py"],
-      "enabled": true,
-      "environment": {
-        "RESOLVE_SCRIPT_API": "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting",
-        "PYTHONPATH": "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
-      }
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "davinci-resolve": {
-      "command": "/path/to/venv/bin/python",
-      "args": ["/path/to/davinci-resolve-mcp/src/server.py"]
-    }
-  }
-}
-```
-
-### Cursor
-
-`~/.cursor/mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "davinci-resolve": {
-      "command": "/path/to/venv/bin/python",
-      "args": ["/path/to/davinci-resolve-mcp/src/server.py"]
-    }
-  }
-}
-```
-
-### VS Code (Copilot)
-
-`.vscode/mcp.json` (workspace root)
-
-```json
-{
-  "mcpServers": {
-    "davinci-resolve": {
-      "command": "/path/to/venv/bin/python",
-      "args": ["/path/to/davinci-resolve-mcp/src/server.py"]
-    }
-  }
-}
-```
-
-### Zed
-
-`~/.config/zed/settings.json`
-
-```json
-{
-  "lsp": {
-    "mcpServers": {
-      "davinci-resolve": {
-        "command": "/path/to/venv/bin/python",
-        "args": ["/path/to/davinci-resolve-mcp/src/server.py"]
-      }
-    }
-  }
-}
-```
-
-## Usage Examples
-
-Once connected, control DaVinci Resolve through natural language:
-
-### Project Setup & Organization
+Una vez conectado, controlá DaVinci Resolve con lenguaje natural:
 
 ```
-"Create a new project called 'Brand_Campaign_2024' in the 'Commercials' folder"
-→ Instead of: Right-click project list > New Project, typing name, drag-and-drop to folder
+"Crear un nuevo proyecto llamado 'Campaña_Marca_2024' en la carpeta 'Comerciales'"
+→ En vez de: Clic derecho en lista de proyectos > Nuevo Proyecto, escribir nombre, arrastrar a carpeta
 
-"Import all files from '/Volumes/SSD/RAW_footage' into the Media Pool"
-→ Instead of: File > Import Media > Navigate to folder > Select all > Open
+"Importar todos los archivos de '/Volumes/SSD/RAW_footage' al Media Pool"
+→ En vez de: File > Import Media > Navegar > Seleccionar todo > Open
 
-"Create a timeline from clips 'Interview_Director_A', 'Interview_Director_B', and 'Interview_Cutaways'"
-→ Instead of: Select 3 clips in Media Pool > Right-click > Create New Timeline Using Selected Clips
+"Agregar 3 tracks de video y 2 de audio al timeline actual"
+→ En vez de: Clic en header de track "+" 5 veces, alternando entre video/audio
 
-"Export current project as a DRP archive to backup drive"
-→ Instead of: File > Export Project > Browse path > Name file > Click Save
+"Detectar cortes de escena en el timeline actual y agregar markers rojos"
+→ En vez de: Timeline menu > Scene Detect > Click Start > Wait > Review cuts manually
+
+"Aplicar LUT 'LogC_to_Rec709' a todos los clips del grupo de color 'Entrevistas'"
+→ En vez de: Clic derecho en cada clip > 3D LUT > Seleccionar LUT (repetir 20+ veces)
+
+"Hacer quick export del timeline actual usando el preset 'YouTube_1080p'"
+→ En vez de: Deliver page > Format > Codec > Resolution > Export > Browse > Render
 ```
 
-### Editing & Timeline Operations
-
-```
-"Add 3 video tracks and 2 audio tracks to current timeline"
-→ Instead of: Click track header "+" 5 times, switching between video/audio for each
-
-"Duplicate 'Assembly_v1' timeline as 'Assembly_v2' and lock V1 track"
-→ Instead of: Timeline menu > Duplicate > Rename > Click track lock icon
-
-"Set current timeline start timecode to 01:00:00:00"
-→ Instead of: Right-click timeline ruler > Change Start Timecode > Type in > OK
-
-"Export timeline as AAF for ProTools audio mix"
-→ Instead of: File > Export AAF > Choose version > Browse > Save
-```
-
-### Color Grading
-
-```
-"Create a new color version called 'Teal_Orange_grade' on clip 1 on V2"
-→ Instead of: Clip menu > Add Version > Type name > Click version selector
-
-"Apply 'LogC_to_Rec709' LUT to all clips in 'Interview' color group"
-→ Instead of: Right-click each clip > 3D LUT > Select LUT (repeat for 20+ clips)
-
-"Get node graph structure for current clip's grade"
-→ Instead of: Switch to Color page > Count nodes > Manually track connections in inspector
-```
-
-### Audio
-
-```
-"Set audio volume to -6dB and pan to center left on clip 2 on A2"
-→ Instead of: Switch to Fairlight page > Expand clip > Drag fader to -6dB > Pan knob to L
-
-"List all Fairlight presets available for dialogue tracks"
-→ Instead of: Right-click clip > Audio Preset > Browse through all presets
-```
-
-### VFX & Fusion
-
-```
-"Create a Fusion composition on selected clip with output cache enabled"
-→ Instead of: Right-click clip > Open in Fusion > Toggle cache in settings
-
-"Add Merge node, Tracker, and ColorCorrector to active Fusion composition"
-→ Instead of: Click toolbar 3 times (Merge, Tracker, ColorCorrector) > Drag to connect
-```
-
-### Rendering & Delivery
-
-```
-"Check if any render jobs are in progress before starting new render"
-→ Instead of: Switch to Deliver page > Look at render queue > Scroll through status
-
-"Quick export current timeline using 'YouTube_1080p' preset"
-→ Instead of: Deliver page > Format > Codec > Resolution > Export > Browse > Render
-```
-
-### AI-Powered Tasks
-
-```
-"Generate subtitles from audio track A1 and apply to timeline"
-→ Instead of: Timeline menu > Auto Subtitles > Type settings > Wait for processing > Click Create
-
-"Detect scene cuts on current timeline and add red markers"
-→ Instead of: Timeline menu > Scene Detect > Click Start > Wait > Review cuts manually
-```
-
-## Development
-
-### Project Structure
+## Estructura del Proyecto
 
 ```
 davinci-resolve-mcp/
-├── install.py                    # Universal installer (macOS/Windows/Linux)
+├── install.py                    # Instalador universal (macOS/Windows/Linux)
 ├── src/
-│   ├── server.py                # Compound MCP server — 28 tools (default)
-│   ├── resolve_mcp_server.py    # Full MCP server — 356 tools (power users)
-│   └── utils/                   # Platform detection, Resolve connection helpers
-└── docs/
-    ├── resolve_scripting_api.txt # Official Resolve Scripting API reference
-    └── LIVE_API_DISCOVERY_v20.3.2.9.md  # Live API enumeration results
+│   ├── server.py                # Servidor compound — 28 herramientas
+│   ├── resolve_mcp_server.py    # Servidor completo — 356 herramientas
+│   └── granular/                # Servidor modular (356 tools en 10 módulos)
+│       ├── resolve_control.py  # Control de app, presets, constants
+│       ├── timeline.py          # Gestión de timeline
+│       ├── timeline_item.py     # Operaciones de clips, keyframes, transforms
+│       ├── media_pool.py       # Gestión del Media Pool
+│       ├── media_pool_item.py  # Metadata y operaciones de clips
+│       ├── project.py          # Gestión de proyecto
+│       ├── folder.py          # Navegación de carpetas
+│       ├── gallery.py          # Stills, albums, PowerGrade
+│       ├── graph.py           # Color node graph
+│       └── media_storage.py    # Browsing de storage
+├── examples/                    # Ejemplos de uso (validados en Resolve 20.3.2.9)
+├── docs/                      # Documentación
+│   ├── MODULARIZATION.md      # Estructura del servidor granular
+│   ├── PARAMETER_REFERENCE.md # Referencia de parámetros para IA
+│   └── WORKAROUNDS.md        # Workarounds para bugs de API
+└── scripts/                  # Scripts de utilidad
 ```
 
-### Contributing
+## Contributing / Contribuir
 
-We welcome contributions! The following areas especially need help:
-
-**Help Wanted: Untested API Methods**
-
-**5 methods** (1.5%) remain untested against a live DaVinci Resolve instance:
-
-1. **Cloud Project Methods** (4 methods) — Need DaVinci Resolve cloud infrastructure:
-   - `ProjectManager.CreateCloudProject`
-   - `ProjectManager.LoadCloudProject`
-   - `ProjectManager.ImportCloudProject`
-   - `ProjectManager.RestoreCloudProject`
-
-2. **HDR Analysis** (1 method) — Needs specific content:
-   - `Timeline.AnalyzeDolbyVision` — needs HDR/Dolby Vision content
-
-**How to Contribute**
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-contribution`)
-3. Run the existing test suite to ensure nothing breaks
-4. Add your test results or fixes
-5. Submit a pull request
-
-**Other Contribution Ideas**
-
-- **Platform testing** — Tests run on macOS; Windows and Linux verification welcome
-- **Resolve version compatibility** — Test against Resolve 18.x, 19.0, or newer versions
-- **Bug reports** — If a tool returns unexpected results on your setup, file an issue
-- **Documentation** — Improve examples, add tutorials, translate docs
-
-## Changelog
-
-### v2.2.0 (April 2026)
-
-**Bug Fixes:**
-- `get_keyframes`: Fixed crash when GetKeyframeCount returns None (v20 compatibility)
-- `get_property`: Fixed returning null when key is empty
-- `get_audio`/`set_audio`: Returns clear error — audio properties not supported by Resolve API
-- `get_codecs`: Added fallback when format not set
-- `get_keyframe_mode`: Added null handling with mode_name mapping
-
-**New Features:**
-- `resolve_constants` tool: 22 categories with 152 API constants
-- `get_fairlight_presets`, `apply_fairlight_preset`: Fairlight audio preset management
-- `get_items_in_track`, `get_item_list_in_track`: Get timeline items (v20.3)
-- `set_media_pool_item_name`: Rename media pool items (v20.3)
-- `link_full_resolution_media`, `monitor_growing_file`: Proxy and file monitoring (v20.3)
-- `get_voice_isolation_state`, `set_voice_isolation_state`: Voice isolation control (v20.3)
-- `timeline_item` `list_properties` action: Lists all valid property keys
-- `append_to_timeline`, `create_timeline_from_clips`, `import_media`: Enhanced clip control
-
-**Validation:**
-- `set_composite`: Validates against 25 known blend modes
-- `set_retime`: Validates process and motion_estimation against known values
-- `set_crop`: Validates crop values are in [0.0, 1.0] range
-
-### v2.1.0
-
-- **New `fusion_comp` tool** — 20-action tool exposing full Fusion composition node graph API
-- **`timeline_item_fusion` cache actions** — added `get_cache_enabled` and `set_cache` actions
-- **Fusion node graph reference** — docstring includes common tool IDs (Merge, TextPlus, Background, Transform, ColorCorrector, DeltaKeyer, etc.)
-
-For older versions, see the [releases page](https://github.com/DragonJAR/davinci-resolve-mcp/releases).
+¡Las contribuciones son bienvenidas! Ver [CONTRIBUTING.md](./CONTRIBUTING.md) para guías sobre cómo contribuir.
 
 ## Troubleshooting
 
 ### "Not connected to DaVinci Resolve"
 
-- Ensure DaVinci Resolve Studio is **running** (not just installed)
-- Check **Preferences > General > "External scripting using"** is set to **Local**
-- Verify the installer detected the correct Resolve installation path
-- Run `python src/server.py --full` to test connection manually
+- Asegurate de que DaVinci Resolve Studio esté **abierto** (no solo instalado)
+- Verificá que **Preferencias > General > "Scripting externo usando"** esté en **Local**
+- Ejecutá `python src/server.py --full` para probar la conexión manualmente
 
 ### "Could not connect after auto-launch"
 
-- First run may take up to 60 seconds for Resolve to launch
-- Check that Resolve Studio (not free edition) is installed
-- Windows users: Verify Resolve.exe path matches your installation location
-- Linux users: Ensure `/opt/resolve/bin/resolve` exists and is executable
+- La primera ejecución puede tardar hasta 60 segundos en que Resolve se abra
+- Verificá que Resolve Studio (no la versión gratuita) esté instalado
 
-### Tools return unexpected results
+### Los tools devuelven resultados inesperados
 
-- Verify Resolve API paths in your MCP client config match your platform (see [Configuration](#configuration))
-- Check Resolve version is 18.5+ and Scripting API is available
-- Some tools require specific project state (e.g., a timeline must be current for timeline operations)
-- AI features (Magic Mask, Smart Reframe) require DaVinci Neural Engine + Color page context
+- Verificá que las rutas de la API de Resolve en tu config MCP coincidan con tu plataforma
+- Algunas tools requieren estado específico del proyecto (ej: un timeline debe ser el actual para operaciones de timeline)
 
-### Python version warnings
+## Plataforma
 
-- If you see "Python 3.13+ detected" warnings, recreate the virtual environment:
-  ```bash
-  python install.py --no-venv --clients all
-  # Then manually create venv with Python 3.10-3.12
-  ```
+| Plataforma | Estado | Notas |
+|------------|--------|-------|
+| macOS | ✅ Testeado | Desarrollo primario y plataforma de test |
+| Windows | ✅ Soportado | Testeado por la comunidad |
+| Linux | ⚠️ Experimental | Debería funcionar — feedback bienvenido |
 
-### Layout preset or render preset errors
+---
 
-- Ensure preset name does not conflict with existing presets
-- For render presets: verify preset file is valid and from same Resolve version
-- For layout presets: check that Resolve is in Edit page when saving
+## Links
 
-## Platform Support
+- [English README](./README.en.md)
+- [CHANGELOG](./CHANGELOG.md)
+- [CONTRIBUTING](./CONTRIBUTING.md)
+- [GitHub Repository](https://github.com/DragonJAR/davinci-resolve-mcp)
+- [Releases](https://github.com/DragonJAR/davinci-resolve-mcp/releases)
+- [Issues](https://github.com/DragonJAR/davinci-resolve-mcp/issues)
 
-| Platform | Status | Resolve Paths Auto-Detected | Notes |
-|----------|--------|----------------------------|-------|
-| macOS | ✅ Tested | `/Library/Application Support/Blackmagic Design/...` | Primary development and test platform |
-| Windows | ✅ Supported | `C:\ProgramData\Blackmagic Design\...` | Community-tested; PRs welcome |
-| Linux | ⚠️ Experimental | `/opt/resolve/...` | Should work — testing and feedback welcome |
+---
 
-## Security Considerations
-
-This MCP server controls DaVinci Resolve via its Scripting API. Some tools perform actions that are destructive or interact with the host filesystem:
-
-| Tool | Risk | Mitigation |
-|------|------|------------|
-| `quit_app` / `restart_app` | Terminates Resolve process — can cause data loss if unsaved changes exist or a render is in progress | MCP clients should require explicit user confirmation before calling these tools. |
-| `export_layout_preset` / `import_layout_preset` / `delete_layout_preset` | Read/write/delete files in Resolve layout presets directory | Path traversal protection validates all resolved paths stay within expected presets directory. |
-| `save_project` | Creates and removes a temporary `.drp` file in system temp directory | Path is constructed server-side with no LLM-controlled input. |
-
-**Recommendations for MCP client developers:**
-- Enable tool-call confirmation prompts for destructive tools (`quit_app`, `restart_app`, `delete_layout_preset`)
- - Do not grant blanket auto-approval to all tools in this server
+Última actualización: 2026-04-10
