@@ -1,5 +1,7 @@
 # DaVinci Resolve MCP Server
 
+> **Español**: Esta documentación está disponible en español. **[Leer README en español](./README.es.md)**
+
 [![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/DragonJAR/davinci-resolve-mcp/releases)
 [![API Coverage](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#api-coverage)
 [![Tools](https://img.shields.io/badge/MCP%20Tools-28%20(356%20full)-blue.svg)](#server-modes)
